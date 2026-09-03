@@ -17,8 +17,8 @@ RepoCoach FE 会读取公开的 React/Next.js 仓库和目标岗位 JD，围绕�
 
 ## 产品界面
 
-| 项目深挖面试 | 能力报告 |
-| --- | --- |
+| 项目深挖面试                                        | 能力报告                                       |
+| --------------------------------------------------- | ---------------------------------------------- |
 | ![项目深挖面试](docs/assets/interview-training.png) | ![能力报告](docs/assets/capability-report.png) |
 
 ![仓库分析与项目设置](docs/assets/project-settings.png)
@@ -73,6 +73,10 @@ npm run dev
 - API 健康检查：<http://localhost:4000/api/v1/health>
 
 Windows 上 Docker/WSL 可能保留端口 3000，因此本项目默认使用 3002。
+
+## Online deployment
+
+A production-ready deployment guide for Vercel + Render is available in [docs/deployment.md](docs/deployment.md).
 
 ## Docker 一键启动
 

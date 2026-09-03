@@ -9,6 +9,13 @@ function secureAttribute() {
   return secure ? "; Secure" : "";
 }
 
+function sameSiteAttribute() {
+  const configured = process.env.COOKIE_SAME_SITE?.toLowerCase();
+  if (configured === "none") return "; SameSite=None";
+  if (configured === "strict") return "; SameSite=Strict";
+  return "; SameSite=Lax";
+}
+
 export function readSessionCookie(cookieHeader?: string) {
   if (!cookieHeader) return null;
   for (const part of cookieHeader.split(";")) {
@@ -23,7 +30,9 @@ export function createSessionCookie(token: string, maxAgeSeconds: number) {
     sessionCookieName +
     "=" +
     encodeURIComponent(token) +
-    "; HttpOnly; Path=/; SameSite=Lax; Max-Age=" +
+    "; HttpOnly; Path=/" +
+    sameSiteAttribute() +
+    "; Max-Age=" +
     maxAgeSeconds +
     secureAttribute()
   );
@@ -32,7 +41,9 @@ export function createSessionCookie(token: string, maxAgeSeconds: number) {
 export function clearSessionCookie() {
   return (
     sessionCookieName +
-    "=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0" +
+    "=; HttpOnly; Path=/" +
+    sameSiteAttribute() +
+    "; Max-Age=0" +
     secureAttribute()
   );
 }

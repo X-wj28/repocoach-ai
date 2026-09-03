@@ -16,9 +16,12 @@ test("creates a local development session cookie", () => {
   delete process.env.COOKIE_SECURE;
 });
 
-test("supports secure cookies for HTTPS deployments", () => {
+test("supports cross-site secure cookies for separate web and API origins", () => {
   process.env.COOKIE_SECURE = "true";
+  process.env.COOKIE_SAME_SITE = "none";
+  assert.match(createSessionCookie("token", 3600), /SameSite=None/);
   assert.match(createSessionCookie("token", 3600), /; Secure$/);
-  assert.match(clearSessionCookie(), /Max-Age=0; Secure$/);
+  assert.match(clearSessionCookie(), /SameSite=None; Max-Age=0; Secure$/);
   delete process.env.COOKIE_SECURE;
+  delete process.env.COOKIE_SAME_SITE;
 });

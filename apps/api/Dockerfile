@@ -17,7 +17,7 @@ RUN npm run build --workspace apps/api
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-ENV PORT=4000
+ENV PORT=10000
 RUN apk add --no-cache openssl
 
 COPY package.json package-lock.json ./
@@ -28,5 +28,5 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/api/prisma ./apps/api/prisma
 
-EXPOSE 4000
+EXPOSE 10000
 CMD ["sh", "-c", "npm run prisma:deploy --workspace apps/api && node apps/api/dist/main.js"]
