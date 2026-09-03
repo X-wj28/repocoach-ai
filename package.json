@@ -1,0 +1,23 @@
+{
+  "name": "repocoach-fe",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI project deep-dive interview coach for React and Next.js interns.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n web,api -c cyan,green \"npm run dev --workspace apps/web\" \"npm run start:dev --workspace apps/api\"",
+    "dev:web": "npm run dev --workspace apps/web",
+    "dev:api": "npm run start:dev --workspace apps/api",
+    "build": "npm run build --workspace apps/web && npm run build --workspace apps/api",
+    "lint": "npm run lint --workspace apps/web",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1",
+    "prettier": "^3.3.3"
+  }
+}
+
