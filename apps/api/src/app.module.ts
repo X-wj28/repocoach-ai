@@ -10,10 +10,24 @@ import { AuthController } from "./auth/auth.controller";
 import { AuthService } from "./auth/auth.service";
 import { AuthStore } from "./auth/auth.store";
 import { SessionGuard } from "./auth/session.guard";
-import { DatabaseService } from "./database/database.service";
+import { PrismaService } from "./database/prisma.service";
 
 @Module({
-  controllers: [AppController, AgentController, ReportController, AuthController],
-  providers: [DatabaseService, AuthStore, AuthService, SessionGuard, AgentService, GitHubService, DeepSeekService, ReportStore]
+  controllers: [
+    AppController,
+    AgentController,
+    ReportController,
+    AuthController,
+  ],
+  providers: [
+    PrismaService,
+    AuthStore,
+    AuthService,
+    SessionGuard,
+    AgentService,
+    GitHubService,
+    DeepSeekService,
+    ReportStore,
+  ],
 })
 export class AppModule {}

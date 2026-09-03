@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  name         String
+  passwordHash String        @map("password_hash")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  sessions     AuthSession[]
+  interviews   Interview[]
+
+  @@map("users")
+}
+
+model AuthSession {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash, expiresAt])
+  @@map("auth_sessions")
+}
+
+enum InterviewStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum InterviewDimension {
+  REACT
+  NEXTJS
+  ENGINEERING
+  PERFORMANCE
+}
+
+enum InterviewDifficulty {
+  BASIC
+  ADVANCED
+  DEEP
+}
+
+model Interview {
+  id             String            @id
+  userId         String            @map("user_id")
+  projectId      String            @map("project_id")
+  projectName    String            @map("project_name")
+  projectUrl     String            @map("project_url")
+  jobDescription String            @map("job_description") @db.Text
+  status         InterviewStatus   @default(IN_PROGRESS)
+  totalQuestions Int               @map("total_questions")
+  startedAt      DateTime          @default(now()) @map("started_at")
+  completedAt    DateTime?         @map("completed_at")
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers        InterviewAnswer[]
+
+  @@index([userId, projectId, startedAt])
+  @@map("interviews")
+}
+
+model InterviewAnswer {
+  id             String              @id @default(uuid())
+  interviewId    String              @map("interview_id")
+  questionNumber Int                 @map("question_number")
+  questionId     String              @map("question_id")
+  questionPrompt String              @map("question_prompt") @db.Text
+  contextPath    String              @map("context_path")
+  dimension      InterviewDimension
+  difficulty     InterviewDifficulty
+  answer         String              @db.Text
+  score          Float
+  strengths      Json
+  improvements   Json
+  provider       String
+  answeredAt     DateTime            @default(now()) @map("answered_at")
+  interview      Interview           @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  @@unique([interviewId, questionNumber])
+  @@index([interviewId, answeredAt])
+  @@map("interview_answers")
+}

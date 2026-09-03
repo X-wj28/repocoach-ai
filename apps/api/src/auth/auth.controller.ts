@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Req, Res, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from "@nestjs/common";
 import { IsEmail, IsString, MaxLength, MinLength } from "class-validator";
 import { AuthService } from "./auth.service";
 import type { AuthenticatedRequest, CookieResponse } from "./auth.types";
@@ -35,16 +43,28 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post("register")
-  async register(@Body() body: RegisterDto, @Res({ passthrough: true }) response: CookieResponse) {
+  async register(
+    @Body() body: RegisterDto,
+    @Res({ passthrough: true }) response: CookieResponse,
+  ) {
     const result = await this.authService.register(body);
-    response.setHeader("Set-Cookie", createSessionCookie(result.token, result.maxAgeSeconds));
+    response.setHeader(
+      "Set-Cookie",
+      createSessionCookie(result.token, result.maxAgeSeconds),
+    );
     return { user: result.user };
   }
 
   @Post("login")
-  async login(@Body() body: LoginDto, @Res({ passthrough: true }) response: CookieResponse) {
+  async login(
+    @Body() body: LoginDto,
+    @Res({ passthrough: true }) response: CookieResponse,
+  ) {
     const result = await this.authService.login(body);
-    response.setHeader("Set-Cookie", createSessionCookie(result.token, result.maxAgeSeconds));
+    response.setHeader(
+      "Set-Cookie",
+      createSessionCookie(result.token, result.maxAgeSeconds),
+    );
     return { user: result.user };
   }
 
@@ -56,8 +76,11 @@ export class AuthController {
 
   @Post("logout")
   @UseGuards(SessionGuard)
-  logout(@Req() request: AuthenticatedRequest, @Res({ passthrough: true }) response: CookieResponse) {
-    this.authService.logout(request.sessionToken);
+  async logout(
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: CookieResponse,
+  ) {
+    await this.authService.logout(request.sessionToken);
     response.setHeader("Set-Cookie", clearSessionCookie());
     return { success: true };
   }

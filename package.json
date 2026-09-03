@@ -15,7 +15,11 @@
     "test": "npm run test:api",
     "test:api": "npm run build --workspace apps/api && node --test apps/api/test/*.test.cjs",
     "lint": "npm run lint --workspace apps/web",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "db:generate": "npm run prisma:generate --workspace apps/api",
+    "db:migrate": "npm run prisma:migrate --workspace apps/api",
+    "db:deploy": "npm run prisma:deploy --workspace apps/api",
+    "db:import-sqlite": "npm run db:import-sqlite --workspace apps/api"
   },
   "devDependencies": {
     "concurrently": "^9.0.1",

@@ -1,7 +1,11 @@
-import { randomUUID } from "node:crypto";
 import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  InterviewDifficulty,
+  InterviewDimension,
+  InterviewStatus,
+} from "@prisma/client";
 import type { Question } from "../agent/agent.service";
-import { DatabaseService } from "../database/database.service";
+import { PrismaService } from "../database/prisma.service";
 
 type EvaluationRecord = {
   score: number;
@@ -20,86 +24,65 @@ type InterviewRecord = {
   totalQuestions: number;
 };
 
-type AnswerRow = {
-  dimension: Question["dimension"];
-  score: number;
-  strengths: string;
-  improvements: string;
-  context_path: string;
-};
-
-type SessionRow = {
-  id: string;
-  project_name: string;
-  status: string;
-  started_at: string;
-  completed_at: string | null;
-  question_count: number;
-  average_score: number | null;
-};
-
-type CountRow = { count: number };
-
-type InterviewDetailRow = {
-  id: string;
-  project_id: string;
-  project_name: string;
-  project_url: string;
-  job_description: string;
-  status: string;
-  total_questions: number;
-  started_at: string;
-  completed_at: string | null;
-};
-
-type AnswerDetailRow = {
-  question_number: number;
-  question_prompt: string;
-  context_path: string;
-  dimension: Question["dimension"];
-  difficulty: Question["difficulty"];
-  answer: string;
-  score: number;
-  strengths: string;
-  improvements: string;
-  provider: string;
-  answered_at: string;
-};
-
 const dimensions = [
   { key: "react", label: "React 基础", color: "teal" },
   { key: "nextjs", label: "Next.js 应用", color: "blue" },
   { key: "engineering", label: "工程化", color: "amber" },
-  { key: "performance", label: "性能意识", color: "rose" }
+  { key: "performance", label: "性能意识", color: "rose" },
 ] as const;
+
+const dimensionToDatabase: Record<Question["dimension"], InterviewDimension> = {
+  react: InterviewDimension.REACT,
+  nextjs: InterviewDimension.NEXTJS,
+  engineering: InterviewDimension.ENGINEERING,
+  performance: InterviewDimension.PERFORMANCE,
+};
+
+const dimensionFromDatabase: Record<InterviewDimension, Question["dimension"]> =
+  {
+    REACT: "react",
+    NEXTJS: "nextjs",
+    ENGINEERING: "engineering",
+    PERFORMANCE: "performance",
+  };
+
+const difficultyToDatabase: Record<
+  Question["difficulty"],
+  InterviewDifficulty
+> = {
+  基础: InterviewDifficulty.BASIC,
+  进阶: InterviewDifficulty.ADVANCED,
+  深入: InterviewDifficulty.DEEP,
+};
+
+const difficultyFromDatabase: Record<
+  InterviewDifficulty,
+  Question["difficulty"]
+> = {
+  BASIC: "基础",
+  ADVANCED: "进阶",
+  DEEP: "深入",
+};
 
 @Injectable()
 export class ReportStore {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  private get database() {
-    return this.databaseService.connection;
+  async createInterview(interview: InterviewRecord) {
+    await this.prisma.interview.create({
+      data: {
+        id: interview.id,
+        userId: interview.userId,
+        projectId: interview.projectId,
+        projectName: interview.projectName,
+        projectUrl: interview.projectUrl,
+        jobDescription: interview.jobDescription,
+        totalQuestions: interview.totalQuestions,
+      },
+    });
   }
 
-  createInterview(interview: InterviewRecord) {
-    this.database.prepare(`
-      INSERT INTO interviews (
-        id, user_id, project_id, project_name, project_url, job_description,
-        status, total_questions, started_at
-      ) VALUES (?, ?, ?, ?, ?, ?, 'in_progress', ?, ?)
-    `).run(
-      interview.id,
-      interview.userId,
-      interview.projectId,
-      interview.projectName,
-      interview.projectUrl,
-      interview.jobDescription,
-      interview.totalQuestions,
-      new Date().toISOString()
-    );
-  }
-
-  recordAnswer(input: {
+  async recordAnswer(input: {
     interviewId: string;
     questionNumber: number;
     question: Question;
@@ -107,73 +90,94 @@ export class ReportStore {
     evaluation: EvaluationRecord;
     completed: boolean;
   }) {
-    const now = new Date().toISOString();
-    this.database.prepare(`
-      INSERT INTO interview_answers (
-        id, interview_id, question_number, question_id, question_prompt,
-        context_path, dimension, difficulty, answer, score,
-        strengths, improvements, provider, answered_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      randomUUID(),
-      input.interviewId,
-      input.questionNumber,
-      input.question.id,
-      input.question.prompt,
-      input.question.contextPath,
-      input.question.dimension,
-      input.question.difficulty,
-      input.answer,
-      input.evaluation.score,
-      JSON.stringify(input.evaluation.strengths),
-      JSON.stringify(input.evaluation.improvements),
-      input.evaluation.provider,
-      now
-    );
+    await this.prisma.interviewAnswer.create({
+      data: {
+        interviewId: input.interviewId,
+        questionNumber: input.questionNumber,
+        questionId: input.question.id,
+        questionPrompt: input.question.prompt,
+        contextPath: input.question.contextPath,
+        dimension: dimensionToDatabase[input.question.dimension],
+        difficulty: difficultyToDatabase[input.question.difficulty],
+        answer: input.answer,
+        score: input.evaluation.score,
+        strengths: input.evaluation.strengths,
+        improvements: input.evaluation.improvements,
+        provider: input.evaluation.provider,
+      },
+    });
 
     if (input.completed) {
-      this.database.prepare("UPDATE interviews SET status = 'completed', completed_at = ? WHERE id = ?")
-        .run(now, input.interviewId);
+      await this.prisma.interview.update({
+        where: { id: input.interviewId },
+        data: { status: InterviewStatus.COMPLETED, completedAt: new Date() },
+      });
     }
   }
 
-  getProjectReport(projectId: string, userId: string) {
-    const answers = this.database.prepare(`
-      SELECT a.dimension, a.score, a.strengths, a.improvements, a.context_path
-      FROM interview_answers a
-      INNER JOIN interviews i ON i.id = a.interview_id
-      WHERE i.project_id = ? AND i.user_id = ?
-      ORDER BY a.answered_at DESC
-    `).all(projectId, userId) as unknown as AnswerRow[];
+  async getProjectReport(projectId: string, userId: string) {
+    const [databaseAnswers, sessions, completedInterviews] = await Promise.all([
+      this.prisma.interviewAnswer.findMany({
+        where: { interview: { projectId, userId } },
+        orderBy: { answeredAt: "desc" },
+        select: {
+          dimension: true,
+          score: true,
+          strengths: true,
+          improvements: true,
+          contextPath: true,
+        },
+      }),
+      this.prisma.interview.findMany({
+        where: { projectId, userId },
+        orderBy: { startedAt: "desc" },
+        take: 6,
+        include: { answers: { select: { score: true } } },
+      }),
+      this.prisma.interview.count({
+        where: { projectId, userId, status: InterviewStatus.COMPLETED },
+      }),
+    ]);
 
-    const sessions = this.database.prepare(`
-      SELECT i.id, i.project_name, i.status, i.started_at, i.completed_at,
-        COUNT(a.id) AS question_count, AVG(a.score) AS average_score
-      FROM interviews i
-      LEFT JOIN interview_answers a ON a.interview_id = i.id
-      WHERE i.project_id = ? AND i.user_id = ?
-      GROUP BY i.id
-      ORDER BY i.started_at DESC
-      LIMIT 6
-    `).all(projectId, userId) as unknown as SessionRow[];
-    const completedInterviews = this.database.prepare(`
-      SELECT COUNT(*) AS count FROM interviews WHERE project_id = ? AND user_id = ? AND status = 'completed'
-    `).get(projectId, userId) as unknown as CountRow;
-
+    const answers = databaseAnswers.map((answer) => ({
+      ...answer,
+      dimension: dimensionFromDatabase[answer.dimension],
+    }));
     const dimensionResults = dimensions.map((dimension) => {
-      const matching = answers.filter((answer) => answer.dimension === dimension.key);
+      const matching = answers.filter(
+        (answer) => answer.dimension === dimension.key,
+      );
       const score = matching.length
-        ? Math.round((matching.reduce((sum, answer) => sum + answer.score, 0) / matching.length) * 10)
+        ? Math.round(
+            (matching.reduce((sum, answer) => sum + answer.score, 0) /
+              matching.length) *
+              10,
+          )
         : 0;
-      return { ...dimension, score, answerCount: matching.length, feedback: this.dimensionFeedback(score, matching.length) };
+      return {
+        ...dimension,
+        score,
+        answerCount: matching.length,
+        feedback: this.dimensionFeedback(score, matching.length),
+      };
     });
 
     const readinessScore = answers.length
-      ? Math.round((answers.reduce((sum, answer) => sum + answer.score, 0) / answers.length) * 10)
+      ? Math.round(
+          (answers.reduce((sum, answer) => sum + answer.score, 0) /
+            answers.length) *
+            10,
+        )
       : 0;
-    const strengths = this.uniqueFeedback(answers.flatMap((answer) => this.parseList(answer.strengths)));
-    const improvements = this.uniqueFeedback(answers.flatMap((answer) => this.parseList(answer.improvements)));
-    const measured = dimensionResults.filter((dimension) => dimension.answerCount > 0);
+    const strengths = this.uniqueFeedback(
+      answers.flatMap((answer) => this.parseList(answer.strengths)),
+    );
+    const improvements = this.uniqueFeedback(
+      answers.flatMap((answer) => this.parseList(answer.improvements)),
+    );
+    const measured = dimensionResults.filter(
+      (dimension) => dimension.answerCount > 0,
+    );
     const weakest = [...measured].sort((a, b) => a.score - b.score)[0];
     const strongest = [...measured].sort((a, b) => b.score - a.score)[0];
 
@@ -181,86 +185,100 @@ export class ReportStore {
       projectId,
       hasData: answers.length > 0,
       readinessScore,
-      averageScore: answers.length ? Number((readinessScore / 10).toFixed(1)) : 0,
+      averageScore: answers.length
+        ? Number((readinessScore / 10).toFixed(1))
+        : 0,
       answeredQuestions: answers.length,
-      completedInterviews: Number(completedInterviews.count),
-      coveredTopics: new Set(answers.map((answer) => answer.context_path)).size,
+      completedInterviews,
+      coveredTopics: new Set(answers.map((answer) => answer.contextPath)).size,
       summary: answers.length
-        ? `${strongest?.label ?? "项目表达"}表现相对稳定，下一阶段优先强化${weakest?.label ?? "工程化表达"}。`
+        ? (strongest?.label ?? "项目表达") +
+          "表现相对稳定，下一阶段优先强化" +
+          (weakest?.label ?? "工程化表达") +
+          "。"
         : "完成一次项目面试后，这里会生成真实能力分析。",
       dimensions: dimensionResults,
       strengths: strengths.slice(0, 4),
       improvements: improvements.slice(0, 4),
-      nextActions: (improvements.length ? improvements : [
-        "结合真实文件说明一次技术取舍",
-        "补充异常、加载和空状态的处理",
-        "用数据解释一次性能优化过程"
-      ]).slice(0, 3),
-      recentSessions: sessions.map((session) => ({
-        id: session.id,
-        projectName: session.project_name,
-        status: session.status,
-        questionCount: Number(session.question_count),
-        averageScore: session.average_score === null ? 0 : Number(session.average_score.toFixed(1)),
-        startedAt: session.started_at,
-        completedAt: session.completed_at
-      }))
+      nextActions: (improvements.length
+        ? improvements
+        : [
+            "结合真实文件说明一次技术取舍",
+            "补充异常、加载和空状态的处理",
+            "用数据解释一次性能优化过程",
+          ]
+      ).slice(0, 3),
+      recentSessions: sessions.map((session) => {
+        const average = session.answers.length
+          ? session.answers.reduce((sum, answer) => sum + answer.score, 0) /
+            session.answers.length
+          : 0;
+        return {
+          id: session.id,
+          projectName: session.projectName,
+          status:
+            session.status === InterviewStatus.COMPLETED
+              ? "completed"
+              : "in_progress",
+          questionCount: session.answers.length,
+          averageScore: Number(average.toFixed(1)),
+          startedAt: session.startedAt.toISOString(),
+          completedAt: session.completedAt?.toISOString() ?? null,
+        };
+      }),
     };
   }
 
-  getInterviewDetail(interviewId: string, userId: string) {
-    const interview = this.database.prepare(`
-      SELECT id, project_id, project_name, project_url, job_description, status,
-        total_questions, started_at, completed_at
-      FROM interviews WHERE id = ? AND user_id = ?
-    `).get(interviewId, userId) as unknown as InterviewDetailRow | undefined;
+  async getInterviewDetail(interviewId: string, userId: string) {
+    const interview = await this.prisma.interview.findFirst({
+      where: { id: interviewId, userId },
+      include: { answers: { orderBy: { questionNumber: "asc" } } },
+    });
     if (!interview) throw new NotFoundException("找不到这次面试记录。");
 
-    const answers = this.database.prepare(`
-      SELECT question_number, question_prompt, context_path, dimension, difficulty,
-        answer, score, strengths, improvements, provider, answered_at
-      FROM interview_answers
-      WHERE interview_id = ?
-      ORDER BY question_number ASC
-    `).all(interviewId) as unknown as AnswerDetailRow[];
-    const averageScore = answers.length
-      ? Number((answers.reduce((sum, answer) => sum + answer.score, 0) / answers.length).toFixed(1))
+    const averageScore = interview.answers.length
+      ? Number(
+          (
+            interview.answers.reduce((sum, answer) => sum + answer.score, 0) /
+            interview.answers.length
+          ).toFixed(1),
+        )
       : 0;
 
     return {
       id: interview.id,
-      projectId: interview.project_id,
-      projectName: interview.project_name,
-      projectUrl: interview.project_url,
-      jobDescription: interview.job_description,
-      status: interview.status,
-      totalQuestions: Number(interview.total_questions),
+      projectId: interview.projectId,
+      projectName: interview.projectName,
+      projectUrl: interview.projectUrl,
+      jobDescription: interview.jobDescription,
+      status:
+        interview.status === InterviewStatus.COMPLETED
+          ? "completed"
+          : "in_progress",
+      totalQuestions: interview.totalQuestions,
       averageScore,
-      startedAt: interview.started_at,
-      completedAt: interview.completed_at,
-      answers: answers.map((answer) => ({
-        questionNumber: Number(answer.question_number),
-        question: answer.question_prompt,
-        contextPath: answer.context_path,
-        dimension: answer.dimension,
-        difficulty: answer.difficulty,
+      startedAt: interview.startedAt.toISOString(),
+      completedAt: interview.completedAt?.toISOString() ?? null,
+      answers: interview.answers.map((answer) => ({
+        questionNumber: answer.questionNumber,
+        question: answer.questionPrompt,
+        contextPath: answer.contextPath,
+        dimension: dimensionFromDatabase[answer.dimension],
+        difficulty: difficultyFromDatabase[answer.difficulty],
         answer: answer.answer,
-        score: Number(answer.score),
+        score: answer.score,
         strengths: this.parseList(answer.strengths),
         improvements: this.parseList(answer.improvements),
         provider: answer.provider,
-        answeredAt: answer.answered_at
-      }))
+        answeredAt: answer.answeredAt.toISOString(),
+      })),
     };
   }
 
-  private parseList(value: string) {
-    try {
-      const parsed = JSON.parse(value) as unknown;
-      return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
-    } catch {
-      return [];
-    }
+  private parseList(value: unknown) {
+    return Array.isArray(value)
+      ? value.filter((item): item is string => typeof item === "string")
+      : [];
   }
 
   private uniqueFeedback(items: string[]) {
