@@ -1,5 +1,7 @@
 # RepoCoach FE
 
+[![CI](https://github.com/X-wj28/repocoach-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/X-wj28/repocoach-ai/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/license-MIT-0f766e)](LICENSE) [![Node](https://img.shields.io/badge/node-22-339933)](https://nodejs.org/)
+
 面向前端实习生的 GitHub 项目深挖与 AI 技术面试训练工具。
 
 RepoCoach FE 会读取公开的 React/Next.js 仓库和目标岗位 JD，围绕真实代码生成项目面试题，评价回答，并持续沉淀个人能力报告。项目支持 DeepSeek 真实模型，也提供无需模型密钥的本地兜底模式。
@@ -12,6 +14,20 @@ RepoCoach FE 会读取公开的 React/Next.js 仓库和目标岗位 JD，围绕�
 - 训练记录：保存每次问答、评分、优点和改进建议，支持回放与 Markdown 导出
 - 能力报告：按 React、Next.js、工程化和性能意识聚合真实训练信号
 - 工程化交付：Prisma 迁移、PostgreSQL、Docker Compose 和 GitHub Actions CI
+
+## 产品界面
+
+| 项目深挖面试 | 能力报告 |
+| --- | --- |
+| ![项目深挖面试](docs/assets/interview-training.png) | ![能力报告](docs/assets/capability-report.png) |
+
+![仓库分析与项目设置](docs/assets/project-settings.png)
+
+所有截图均来自本地 Docker 环境的真实运行界面。面试问题、评价和报告由实际 API 返回，不是静态设计稿。
+
+## 简历与面试材料
+
+可直接用于简历和项目面试的中文描述、技术亮点和讲解提纲见 [docs/resume-project.md](docs/resume-project.md)。
 
 ## 技术架构
 
