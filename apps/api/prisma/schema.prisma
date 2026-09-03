@@ -31,6 +31,18 @@ model AuthSession {
   @@map("auth_sessions")
 }
 
+model ProjectSnapshot {
+  id            String   @id
+  name          String
+  url           String
+  stack         Json
+  readmePreview String   @map("readme_preview") @db.Text
+  files         Json
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("project_snapshots")
+}
+
 enum InterviewStatus {
   IN_PROGRESS
   COMPLETED

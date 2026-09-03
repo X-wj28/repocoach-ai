@@ -194,6 +194,10 @@ textarea:focus { border-color: #6fa49b; box-shadow: 0 0 0 3px rgba(63,141,130,.1
 .empty-training { min-height: 280px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
 .empty-icon { width: 48px; height: 48px; display: grid; place-items: center; color: var(--teal); background: #e5f2ee; border-radius: 50%; margin-bottom: 14px; }
 .empty-training p { color: var(--muted); font-size: 12px; margin: 8px 0 20px; }
+.interview-starting { min-height: 280px; display: flex; align-items: center; justify-content: center; gap: 16px; text-align: left; }
+.starting-indicator { width: 48px; height: 48px; display: grid; place-items: center; flex-shrink: 0; color: var(--teal); background: #e5f2ee; border-radius: 50%; }
+.interview-starting h2 { margin-top: 7px; }
+.interview-starting p { max-width: 520px; color: var(--muted); font-size: 12px; line-height: 1.6; margin-top: 7px; }
 .report-hero { display: flex; justify-content: space-between; gap: 30px; align-items: center; border-top: 3px solid var(--teal); }
 .report-score { color: var(--navy); font-size: 48px; font-weight: 700; line-height: 1; margin: 16px 0 8px; }
 .report-score small { color: var(--faint); font-size: 15px; font-weight: 400; }

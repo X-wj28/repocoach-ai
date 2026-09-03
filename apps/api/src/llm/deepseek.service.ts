@@ -11,6 +11,7 @@ export class DeepSeekService {
   private readonly baseUrl = (process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com").replace(/\/$/, "");
   private readonly model = process.env.DEEPSEEK_MODEL ?? "deepseek-chat";
   private readonly apiKey = process.env.DEEPSEEK_API_KEY;
+  private readonly timeoutMs = Number(process.env.DEEPSEEK_TIMEOUT_MS ?? 20000);
   private readonly dispatcher?: Dispatcher;
 
   constructor() {
@@ -24,9 +25,12 @@ export class DeepSeekService {
 
   async complete(messages: LlmMessage[], options?: { temperature?: number; maxTokens?: number }) {
     if (!this.apiKey) return null;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), Number.isFinite(this.timeoutMs) ? this.timeoutMs : 20000);
 
     const init: RequestInit & { dispatcher?: Dispatcher } = {
       method: "POST",
+      signal: controller.signal,
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
@@ -45,8 +49,11 @@ export class DeepSeekService {
     let response: Response;
     try {
       response = await fetch(`${this.baseUrl}/chat/completions`, init);
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") throw new BadGatewayException("DeepSeek API 请求超时，已准备使用本地评分。");
       throw new BadGatewayException("无法连接 DeepSeek API，请检查网络、代理和 API Key 配置。");
+    } finally {
+      clearTimeout(timeout);
     }
 
     if (!response.ok) {

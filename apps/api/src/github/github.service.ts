@@ -1,5 +1,6 @@
 import { BadGatewayException, BadRequestException, Injectable } from "@nestjs/common";
 import { Dispatcher, ProxyAgent } from "undici";
+import { PrismaService } from "../database/prisma.service";
 
 type GitHubRepository = {
   name: string;
@@ -50,7 +51,7 @@ export class GitHubService {
   private readonly dispatcher?: Dispatcher;
   private readonly contexts = new Map<string, ProjectContext>();
 
-  constructor() {
+  constructor(private readonly prisma: PrismaService) {
     const proxyUrl = process.env.HTTPS_PROXY ?? process.env.HTTP_PROXY;
     if (proxyUrl) this.dispatcher = new ProxyAgent(proxyUrl);
   }
@@ -83,6 +84,11 @@ export class GitHubService {
       files: usableFiles
     };
     this.contexts.set(projectId, context);
+    await this.prisma.projectSnapshot.upsert({
+      where: { id: projectId },
+      create: { id: context.id, name: context.name, url: context.url, stack: context.stack, readmePreview: context.readmePreview, files: context.files },
+      update: { name: context.name, url: context.url, stack: context.stack, readmePreview: context.readmePreview, files: context.files }
+    });
 
     return {
       id: projectId,
@@ -103,8 +109,25 @@ export class GitHubService {
     };
   }
 
-  getProjectContext(projectId: string): ProjectContext | undefined {
-    return this.contexts.get(projectId);
+  async getProjectContext(projectId: string): Promise<ProjectContext | undefined> {
+    const cached = this.contexts.get(projectId);
+    if (cached) return cached;
+    const snapshot = await this.prisma.projectSnapshot.findUnique({ where: { id: projectId } });
+    if (!snapshot) return undefined;
+    const context: ProjectContext = {
+      id: snapshot.id,
+      name: snapshot.name,
+      url: snapshot.url,
+      stack: Array.isArray(snapshot.stack) ? snapshot.stack.filter((item): item is string => typeof item === "string") : [],
+      readmePreview: snapshot.readmePreview,
+      files: Array.isArray(snapshot.files) ? snapshot.files.filter((item): item is AnalyzedFile => {
+        if (!item || typeof item !== "object") return false;
+        const file = item as Record<string, unknown>;
+        return typeof file.path === "string" && typeof file.size === "number" && typeof file.language === "string" && typeof file.snippet === "string";
+      }) : []
+    };
+    this.contexts.set(projectId, context);
+    return context;
   }
 
   private parseRepositoryUrl(repoUrl: string) {

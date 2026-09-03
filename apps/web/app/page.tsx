@@ -229,6 +229,10 @@ function InterviewCard({
   );
 }
 
+function InterviewStartingCard({ projectName }: { projectName: string }) {
+  return <section className="interview-starting panel" aria-live="polite" aria-busy="true"><div className="starting-indicator"><LoaderCircle size={22} className="spin" /></div><div><span className="section-kicker"><Sparkles size={14} />Agent 正在准备</span><h2>正在为 {projectName} 组织第一道问题</h2><p>正在恢复项目上下文并创建训练记录，完成后会自动显示题目。</p></div></section>;
+}
+
 export default function Home() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -394,7 +398,7 @@ export default function Home() {
     <SessionsPanel report={report} isLoading={isReportLoading} onOpenReport={() => handleNav("能力报告")} onOpenSession={handleOpenSession} />
   </>;
 
-  const renderTraining = () => <><div className="page-heading compact-heading"><div><div className="eyebrow"><span className="eyebrow-line" />训练空间</div><h1>项目深挖面试</h1><p>围绕 {project.name} 的 React / Next.js 技术面试。</p></div><span className="mode-chip"><ShieldCheck size={14} />公开仓库只读</span></div>{!interviewId && !isStarting ? <section className="empty-training panel"><div className="empty-icon"><Play size={21} /></div><h2>准备开始一次项目面试</h2><p>Agent 会先分析项目上下文，再根据你的回答继续追问。</p><button className="primary-button" onClick={handleStartTraining}><Play size={16} />开始训练</button></section> : <InterviewCard question={question} questionNumber={questionNumber} totalQuestions={totalQuestions} answer={answer} evaluation={evaluation} submitted={submitted} isSubmitting={isSubmitting} isStarting={isStarting} onAnswerChange={setAnswer} onSubmit={handleSubmit} onNext={handleNext} />}</>;
+  const renderTraining = () => <><div className="page-heading compact-heading"><div><div className="eyebrow"><span className="eyebrow-line" />训练空间</div><h1>项目深挖面试</h1><p>围绕 {project.name} 的 React / Next.js 技术面试。</p></div><span className="mode-chip"><ShieldCheck size={14} />公开仓库只读</span></div>{isStarting ? <InterviewStartingCard projectName={project.name} /> : !interviewId ? <section className="empty-training panel"><div className="empty-icon"><Play size={21} /></div><h2>准备开始一次项目面试</h2><p>Agent 会先分析项目上下文，再根据你的回答继续追问。</p><button className="primary-button" onClick={handleStartTraining}><Play size={16} />开始训练</button></section> : <InterviewCard question={question} questionNumber={questionNumber} totalQuestions={totalQuestions} answer={answer} evaluation={evaluation} submitted={submitted} isSubmitting={isSubmitting} isStarting={isStarting} onAnswerChange={setAnswer} onSubmit={handleSubmit} onNext={handleNext} />}</>;
 
   const renderReport = () => <>
     <div className="page-heading compact-heading">

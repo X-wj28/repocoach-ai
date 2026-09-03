@@ -10,6 +10,7 @@ RepoCoach FE 会读取公开的 React/Next.js 仓库和目标岗位 JD，围绕�
 
 - 公开 GitHub 仓库分析：识别技术栈、README、目录树和关键 TypeScript/TSX 文件
 - AI Agent 面试：结合项目代码与岗位 JD 生成问题、追问和结构化评价
+- 快速训练启动：仓库上下文持久化到 PostgreSQL，首题由上下文规划器即时生成，避免同步等待模型
 - 完整账号体系：邮箱注册登录、`HttpOnly` Cookie 会话和用户数据隔离
 - 训练记录：保存每次问答、评分、优点和改进建议，支持回放与 Markdown 导出
 - 能力报告：按 React、Next.js、工程化和性能意识聚合真实训练信号
@@ -102,6 +103,7 @@ docker compose down
 | `DATABASE_URL`        | 本机开发数据库连接             | PostgreSQL 本地容器            |
 | `DOCKER_DATABASE_URL` | API 容器访问数据库的连接       | Compose 内部 PostgreSQL        |
 | `DEEPSEEK_API_KEY`    | 启用真实 DeepSeek Agent        | 未配置时使用本地兜底           |
+| `DEEPSEEK_TIMEOUT_MS` | 模型请求超时与自动降级阈值     | `20000`                        |
 | `GITHUB_TOKEN`        | 提高 GitHub API 请求额度       | 可选                           |
 | `COOKIE_SECURE`       | HTTPS 部署时启用 Secure Cookie | 本地 `false`                   |
 
