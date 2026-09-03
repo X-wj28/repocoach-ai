@@ -9,6 +9,7 @@ config({ path: resolve(process.cwd(), ".env"), override: false });
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableShutdownHooks();
   const allowedOrigins = (process.env.WEB_ORIGIN ?? "http://localhost:3002")
     .split(",")
     .map((origin) => origin.trim())

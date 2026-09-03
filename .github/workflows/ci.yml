@@ -6,18 +6,34 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DATABASE_URL: postgresql://repocoach:repocoach$localhost:5432/repocoach?schema=public
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout$v4
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node$v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
-      - name: Build web and API
+        run: npm ci --no-audit --no-fund
+      - name: Generate Prisma Client
+        run: npm run db:generate
+      - name: Lint web
+        run: npm run lint
+      - name: Test API
+        run: npm run test:api
+      - name: Build production bundles
         run: npm run build

@@ -1,0 +1,11 @@
+.git
+.github
+.next
+dist
+node_modules
+coverage
+.env
+.env.*
+!.env.example
+*.log
+apps/api/data

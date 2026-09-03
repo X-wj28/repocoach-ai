@@ -1,16 +1,58 @@
-# Architecture Notes
+# Architecture
 
 ## Runtime boundaries
 
-- `apps/web` owns the interview workspace UI and browser interactions.
-- `apps/api` owns repository analysis, interview state, persistence, and Agent tools.
+- `apps/web` owns authentication screens, repository setup, interview interaction, report visualization, replay, and export.
+- `apps/api` owns authentication, repository analysis, Agent orchestration, model access, persistence, and report aggregation.
 - `packages/shared` contains contracts shared by the web and API packages.
+- PostgreSQL stores users, hashed sessions, interviews, answers, and evaluation signals.
 
-## Agent contract
+## Request flow
 
-The Agent receives a project context, the current interview state, and the latest answer. It returns a next question, an evaluation, and citations to the relevant repository files. The current implementation uses a deterministic local mock so the product can be demonstrated before a model provider is configured.
+```text
+Browser
+  |
+  | REST + HttpOnly Cookie
+  v
+NestJS API
+  |-- SessionGuard --> Prisma --> PostgreSQL
+  |-- GitHubService --> GitHub Public API
+  '-- AgentService
+        |-- DeepSeekService --> DeepSeek API
+        '-- deterministic fallback
+```
+
+The browser never receives GitHub or model tokens. All third-party requests are made by the API.
+
+## Agent flow
+
+1. The API reads a bounded repository context: metadata, README, tree, and selected source files.
+2. Agent prompts treat repository text as untrusted data and reject instructions embedded in source content.
+3. DeepSeek generates a project-grounded question or evaluates an answer.
+4. Invalid model output and provider failures fall back to deterministic local behavior.
+5. Structured evaluation data is persisted before the API returns the next interview state.
+6. The report service aggregates stored signals by capability dimension.
+
+## Persistence
+
+Prisma owns the PostgreSQL schema and migration history. Relations use cascading deletes from users to sessions and interviews, and from interviews to answers. Every report and interview lookup includes the authenticated user ID.
+
+The legacy SQLite importer is idempotent and imports only records with an authenticated owner.
+
+## Deployment topology
+
+```text
+localhost:3002 -> web container (:3000)
+localhost:4000 -> api container (:4000)
+                     |
+                     v
+                postgres (:5432)
+```
+
+Docker Compose waits for PostgreSQL health before starting the API. The API applies committed Prisma migrations before booting, and the web container waits for the API health check.
+
+For HTTPS deployments, set `WEB_ORIGIN` to the public frontend origin and `COOKIE_SECURE=true`. The public `NEXT_PUBLIC_API_URL` value is embedded during the web image build.
 
 ## Public repository policy
 
-The MVP accepts public GitHub repository URLs only. Repository content is read-only. Write actions, private repository access, and automatic code changes are intentionally outside the first release.
-
+The application accepts public GitHub repository URLs only. Repository access is read-only. Private repository access, write actions, automatic code changes, and PR creation remain outside the current release.

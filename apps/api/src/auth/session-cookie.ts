@@ -1,5 +1,14 @@
 export const sessionCookieName = "repocoach_session";
 
+function secureAttribute() {
+  const configured = process.env.COOKIE_SECURE;
+  const secure =
+    configured === undefined
+      ? process.env.NODE_ENV === "production"
+      : configured === "true";
+  return secure ? "; Secure" : "";
+}
+
 export function readSessionCookie(cookieHeader?: string) {
   if (!cookieHeader) return null;
   for (const part of cookieHeader.split(";")) {
@@ -10,11 +19,20 @@ export function readSessionCookie(cookieHeader?: string) {
 }
 
 export function createSessionCookie(token: string, maxAgeSeconds: number) {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  return `${sessionCookieName}=${encodeURIComponent(token)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${maxAgeSeconds}${secure}`;
+  return (
+    sessionCookieName +
+    "=" +
+    encodeURIComponent(token) +
+    "; HttpOnly; Path=/; SameSite=Lax; Max-Age=" +
+    maxAgeSeconds +
+    secureAttribute()
+  );
 }
 
 export function clearSessionCookie() {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  return `${sessionCookieName}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${secure}`;
+  return (
+    sessionCookieName +
+    "=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0" +
+    secureAttribute()
+  );
 }

@@ -1,20 +1,75 @@
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: repocoach
-      POSTGRES_USER: repocoach
-      POSTGRES_PASSWORD: repocoach
+      POSTGRES_DB: ${POSTGRES_DB:-repocoach}
+      POSTGRES_USER: ${POSTGRES_USER:-repocoach}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-repocoach}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - repocoach_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-repocoach} -d ${POSTGRES_DB:-repocoach}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-  redis:
-    image: redis:7-alpine
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql://repocoach:repocoach@postgres:5432/repocoach?schema=public}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3002}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      HTTPS_PROXY: ${CONTAINER_HTTPS_PROXY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
     ports:
-      - "6379:6379"
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:4000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api/v1}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    ports:
+      - "3002:3000"
+    depends_on:
+      api:
+        condition: service_healthy
 
 volumes:
   repocoach_pgdata:
-

@@ -2,62 +2,124 @@
 
 面向前端实习生的 GitHub 项目深挖与 AI 技术面试训练工具。
 
-RepoCoach FE 读取公开的 React/Next.js 项目和目标岗位 JD，围绕真实代码进行自适应技术面试，并生成带有项目证据的反馈和训练计划。项目已接入 DeepSeek、GitHub Public API、账号认证、Prisma ORM 和 PostgreSQL 持久化，同时保留无需模型密钥即可体验的本地兜底模式。
+RepoCoach FE 会读取公开的 React/Next.js 仓库和目标岗位 JD，围绕真实代码生成项目面试题，评价回答，并持续沉淀个人能力报告。项目支持 DeepSeek 真实模型，也提供无需模型密钥的本地兜底模式。
 
-## 项目结构
+## 核心能力
+
+- 公开 GitHub 仓库分析：识别技术栈、README、目录树和关键 TypeScript/TSX 文件
+- AI Agent 面试：结合项目代码与岗位 JD 生成问题、追问和结构化评价
+- 完整账号体系：邮箱注册登录、`HttpOnly` Cookie 会话和用户数据隔离
+- 训练记录：保存每次问答、评分、优点和改进建议，支持回放与 Markdown 导出
+- 能力报告：按 React、Next.js、工程化和性能意识聚合真实训练信号
+- 工程化交付：Prisma 迁移、PostgreSQL、Docker Compose 和 GitHub Actions CI
+
+## 技术架构
+
+```text
+Browser
+  |
+  v
+Next.js 14 + React + TypeScript
+  |
+  | REST + HttpOnly Cookie
+  v
+NestJS API
+  |-- GitHub Public API
+  |-- DeepSeek API / local fallback
+  '-- Prisma ORM --> PostgreSQL
+```
 
 ```text
 apps/
   web/       Next.js 前端工作台
-  api/       NestJS API 和 Agent 编排入口
+  api/       NestJS API、Agent 编排、认证与报告
 packages/
   shared/    前后端共享类型
-docs/        产品和技术设计文档（后续补充）
+docs/        产品和架构文档
 ```
 
-## 本地运行
+## 本地开发
 
-需要 Node.js 22.5+、npm 10+ 和 Docker Desktop。先启动 PostgreSQL，再初始化数据库。
+需要 Node.js 22+、npm 10+ 和 Docker Desktop。
 
-```bash
+1. 从 `.env.example` 复制一份 `.env`。
+2. 启动 PostgreSQL 并应用迁移。
+3. 启动前后端开发服务器。
+
+```powershell
 npm install
 docker compose up -d postgres
 npm run db:deploy
 npm run dev
 ```
 
-- 前端：http://localhost:3002
-- 后端健康检查：http://localhost:4000/api/v1/health
+- 前端：<http://localhost:3002>
+- API 健康检查：<http://localhost:4000/api/v1/health>
 
-也可以分开启动：
+Windows 上 Docker/WSL 可能保留端口 3000，因此本项目默认使用 3002。
 
-```bash
-npm run dev:web
-npm run dev:api
+## Docker 一键启动
+
+下面的命令会构建 Web、API 和 PostgreSQL，并在 API 启动前自动应用 Prisma 迁移：
+
+```powershell
+docker compose up -d --build
+docker compose ps
 ```
 
-复制 `.env.example` 为仓库根目录的 `.env`。配置 `DEEPSEEK_API_KEY` 后启用真实模型；没有模型密钥时，后端自动使用本地评分逻辑。建议配置只读 `GITHUB_TOKEN` 以提高 GitHub API 请求额度。导入公开仓库时，后端会读取仓库元信息、README、目录树和高相关的 TypeScript/TSX 文件。
+停止服务但保留数据库：
 
-用户、登录会话、面试记录和能力报告保存在 PostgreSQL 中，数据模型位于 `apps/api/prisma/schema.prisma`。开发时修改模型后运行 `npm run db:migrate -- --name migration_name`；部署环境运行 `npm run db:deploy`。原 SQLite 文件若存在可保留为本地历史备份，但应用已不再读取它。升级已有开发环境时，可在数据库迁移后运行 `npm run db:import-sqlite` 一次性导入有账号归属的历史数据；该命令可以安全地重复执行。
+```powershell
+docker compose down
+```
 
-## MVP 范围
+## 环境变量
 
-- 输入公开 GitHub 仓库并展示项目上下文
-- 邮箱注册登录、HttpOnly Cookie 会话和用户数据隔离
-- React/Next.js 项目深挖面试
-- 根据回答动态推进问题
-- 保存面试会话和结果
-- 生成技术能力反馈与下一步训练计划
+| 变量                  | 用途                           | 默认值                         |
+| --------------------- | ------------------------------ | ------------------------------ |
+| `NEXT_PUBLIC_API_URL` | 浏览器访问 API 的地址          | `http://localhost:4000/api/v1` |
+| `WEB_ORIGIN`          | API 允许跨域访问的前端地址     | `http://localhost:3002`        |
+| `DATABASE_URL`        | 本机开发数据库连接             | PostgreSQL 本地容器            |
+| `DOCKER_DATABASE_URL` | API 容器访问数据库的连接       | Compose 内部 PostgreSQL        |
+| `DEEPSEEK_API_KEY`    | 启用真实 DeepSeek Agent        | 未配置时使用本地兜底           |
+| `GITHUB_TOKEN`        | 提高 GitHub API 请求额度       | 可选                           |
+| `COOKIE_SECURE`       | HTTPS 部署时启用 Secure Cookie | 本地 `false`                   |
 
-暂不支持私有仓库、GitHub OAuth、自动修改代码、自动合并 PR 和语音面试。
+不要提交 `.env`、GitHub Token 或模型 API Key。
 
-## 后续路线
+## 常用命令
 
-1. 接入 GitHub OAuth，减少注册步骤并同步用户公开仓库。
-2. 增加仓库分层检索，只向模型提供与当前问题相关的代码。
-3. 接入可替换的真实模型 Provider，并记录 token、延迟和失败原因。
-4. 增加测试集，对问题相关性、反馈准确度和引用代码正确性做评估。
+```powershell
+npm run dev             # 启动本地开发环境
+npm run build           # 构建前端和 API
+npm run lint            # 检查前端代码
+npm run test:api        # 构建并执行 API 单元测试
+npm run db:generate     # 生成 Prisma Client
+npm run db:migrate      # 创建开发迁移
+npm run db:deploy       # 应用已有迁移
+npm run db:import-sqlite # 导入旧 SQLite 数据，可重复执行
+```
 
-## 开源说明
+## 数据与安全边界
 
-项目采用 MIT License。请勿将 GitHub Token、模型 API Key 或其他密钥提交到仓库。
+仓库内容始终按不可信输入处理，Agent 提示词会忽略仓库内试图改变任务或索取信息的指令。应用只读取公开仓库，不修改代码、不创建 PR，也不会把 Token 返回给浏览器。
+
+用户、会话、面试记录和报告存储在 PostgreSQL 中。Prisma 数据模型位于 `apps/api/prisma/schema.prisma`。
+
+## CI
+
+每次推送到 `main` 或创建 Pull Request 时，GitHub Actions 会执行：
+
+1. `npm ci`
+2. Prisma Client 生成
+3. 前端 lint
+4. API 自动化测试
+5. 前后端生产构建
+
+## 当前范围
+
+当前版本面向公开仓库和文本面试。私有仓库、GitHub OAuth、语音面试和云端部署属于后续迭代。
+
+## License
+
+MIT
