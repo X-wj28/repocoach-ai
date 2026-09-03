@@ -36,9 +36,19 @@ type AnalyzedFile = {
   snippet: string;
 };
 
+export type ProjectContext = {
+  id: string;
+  name: string;
+  url: string;
+  stack: string[];
+  readmePreview: string;
+  files: AnalyzedFile[];
+};
+
 @Injectable()
 export class GitHubService {
   private readonly dispatcher?: Dispatcher;
+  private readonly contexts = new Map<string, ProjectContext>();
 
   constructor() {
     const proxyUrl = process.env.HTTPS_PROXY ?? process.env.HTTP_PROXY;
@@ -64,6 +74,16 @@ export class GitHubService {
     const stack = this.detectStack(repository, usableFiles);
     const projectId = `github-${owner}-${repo}`.toLowerCase();
 
+    const context: ProjectContext = {
+      id: projectId,
+      name: repository.name,
+      url: repository.html_url,
+      stack,
+      readmePreview: readme.slice(0, 1800),
+      files: usableFiles
+    };
+    this.contexts.set(projectId, context);
+
     return {
       id: projectId,
       name: repository.name,
@@ -76,11 +96,15 @@ export class GitHubService {
       defaultBranch: repository.default_branch,
       owner,
       jobDescription,
-      readmePreview: readme.slice(0, 1800),
+      readmePreview: context.readmePreview,
       keyFiles: usableFiles.map(({ path, size, language }) => ({ path, size, language })),
       treeTruncated: tree.truncated,
       analyzedAt: new Date().toISOString()
     };
+  }
+
+  getProjectContext(projectId: string): ProjectContext | undefined {
+    return this.contexts.get(projectId);
   }
 
   private parseRepositoryUrl(repoUrl: string) {
@@ -204,4 +228,3 @@ export class GitHubService {
     return response.json() as Promise<T>;
   }
 }
-

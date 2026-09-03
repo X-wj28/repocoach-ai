@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Post } from "@nestjs/common";
+import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
 import { IsNotEmpty, IsString, IsUrl, MaxLength } from "class-validator";
+import { SessionGuard } from "./auth/session.guard";
 import { GitHubService } from "./github/github.service";
 
 class AnalyzeProjectDto {
@@ -35,6 +36,7 @@ export class AppController {
   }
 
   @Post("projects/analyze")
+  @UseGuards(SessionGuard)
   analyzeProject(@Body() body: AnalyzeProjectDto) {
     return this.githubService.analyzePublicRepository(body.repoUrl, body.jobDescription);
   }

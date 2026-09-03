@@ -1,6 +1,8 @@
-import { Body, Controller, Param, Post } from "@nestjs/common";
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator";
+import { Body, Controller, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { IsNotEmpty, IsOptional, IsString, IsUrl, MaxLength } from "class-validator";
 import { AgentService } from "./agent.service";
+import { SessionGuard } from "../auth/session.guard";
+import type { AuthenticatedRequest } from "../auth/auth.types";
 
 class StartInterviewDto {
   @IsString()
@@ -11,6 +13,10 @@ class StartInterviewDto {
   @IsString()
   @MaxLength(8000)
   jobDescription?: string;
+
+  @IsOptional()
+  @IsUrl({ protocols: ["https"], require_protocol: true })
+  projectUrl?: string;
 }
 
 class SubmitAnswerDto {
@@ -21,16 +27,17 @@ class SubmitAnswerDto {
 }
 
 @Controller("api/v1/interviews")
+@UseGuards(SessionGuard)
 export class AgentController {
   constructor(private readonly agentService: AgentService) {}
 
   @Post(":interviewId/answer")
-  submitAnswer(@Param("interviewId") interviewId: string, @Body() body: SubmitAnswerDto) {
-    return this.agentService.evaluateAnswer(interviewId, body.answer);
+  submitAnswer(@Param("interviewId") interviewId: string, @Body() body: SubmitAnswerDto, @Req() request: AuthenticatedRequest) {
+    return this.agentService.evaluateAnswer(interviewId, body.answer, request.user.id);
   }
 
   @Post("start")
-  startInterview(@Body() body: StartInterviewDto) {
-    return this.agentService.startInterview(body.projectId, body.jobDescription ?? "");
+  startInterview(@Body() body: StartInterviewDto, @Req() request: AuthenticatedRequest) {
+    return this.agentService.startInterview(body.projectId, body.jobDescription ?? "", body.projectUrl, request.user.id);
   }
 }
