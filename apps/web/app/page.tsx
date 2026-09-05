@@ -35,6 +35,7 @@ import {
   CapabilityReport,
   Evaluation,
   getCurrentUser,
+  getActiveInterview,
   getInterviewDetail,
   getProjectReport,
   InterviewDetail,
@@ -292,6 +293,24 @@ export default function Home() {
       setWorkspaceReady(true);
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!workspaceReady || !currentUser) return;
+    let cancelled = false;
+    getActiveInterview(project.id)
+      .then((active) => {
+        if (cancelled || !active) return;
+        setInterviewId(active.interviewId);
+        setQuestion(active.question);
+        setQuestionNumber(active.questionNumber);
+        setTotalQuestions(active.totalQuestions);
+        setSubmitted(false);
+        setEvaluation(null);
+        setAnswer("");
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [currentUser, project.id, workspaceReady]);
 
   useEffect(() => {
     if (!workspaceReady || !currentUser) return;

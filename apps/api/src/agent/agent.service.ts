@@ -71,6 +71,10 @@ export class AgentService {
     private readonly reportStore: ReportStore,
   ) {}
 
+  getActiveInterview(projectId: string, userId: string) {
+    return this.reportStore.getActiveInterview(projectId, userId);
+  }
+
   async startInterview(
     projectId: string,
     jobDescription: string,

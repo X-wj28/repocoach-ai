@@ -158,6 +158,10 @@ export function startInterview(projectId: string, jobDescription: string, projec
   });
 }
 
+export function getActiveInterview(projectId: string) {
+  return request<{ interviewId: string; projectId: string; question: Question; questionNumber: number; totalQuestions: number } | null>(`/interviews/active?projectId=${encodeURIComponent(projectId)}`);
+}
+
 export function submitInterviewAnswer(interviewId: string, answer: string) {
   return request<Evaluation>(`/interviews/${interviewId}/answer`, {
     method: "POST",

@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { IsNotEmpty, IsOptional, IsString, IsUrl, MaxLength } from "class-validator";
 import { AgentService } from "./agent.service";
 import { SessionGuard } from "../auth/session.guard";
@@ -34,6 +34,11 @@ export class AgentController {
   @Post(":interviewId/answer")
   submitAnswer(@Param("interviewId") interviewId: string, @Body() body: SubmitAnswerDto, @Req() request: AuthenticatedRequest) {
     return this.agentService.evaluateAnswer(interviewId, body.answer, request.user.id);
+  }
+
+  @Get("active")
+  activeInterview(@Query("projectId") projectId: string, @Req() request: AuthenticatedRequest) {
+    return this.agentService.getActiveInterview(projectId, request.user.id);
   }
 
   @Post("start")

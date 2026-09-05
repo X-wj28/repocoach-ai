@@ -104,6 +104,30 @@ export class ReportStore {
     });
   }
 
+  async getActiveInterview(projectId: string, userId: string) {
+    const interview = await this.prisma.interview.findFirst({
+      where: { projectId, userId, status: InterviewStatus.IN_PROGRESS },
+      orderBy: { startedAt: "desc" },
+      select: {
+        id: true,
+        projectId: true,
+        currentQuestion: true,
+        totalQuestions: true,
+        questions: true,
+      },
+    });
+    if (!interview || !Array.isArray(interview.questions)) return null;
+    const question = interview.questions[interview.currentQuestion];
+    if (!question || typeof question !== "object") return null;
+    return {
+      interviewId: interview.id,
+      projectId: interview.projectId,
+      question: question as Question,
+      questionNumber: interview.currentQuestion + 1,
+      totalQuestions: interview.totalQuestions,
+    };
+  }
+
   async recordAnswer(input: {
     interviewId: string;
     questionNumber: number;
