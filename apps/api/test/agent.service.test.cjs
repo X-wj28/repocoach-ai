@@ -52,3 +52,51 @@ test("starts an interview without waiting for DeepSeek", async () => {
   assert.match(result.question.prompt, /数据获取/);
   assert.equal(created.length, 1);
 });
+
+test("restores an interview session after an API restart", async () => {
+  const projectContext = {
+    id: "github-user-project",
+    name: "project",
+    url: "https://github.com/user/project",
+    stack: ["React"],
+    readmePreview: "A project",
+    files: [],
+  };
+  const github = {
+    async getProjectContext() {
+      return projectContext;
+    },
+  };
+  const savedQuestion = {
+    id: "saved-question",
+    prompt: "请说明这个组件的状态边界。",
+    contextPath: "app/page.tsx",
+    dimension: "react",
+    difficulty: "基础",
+  };
+  const progress = [];
+  const reportStore = {
+    async getInterviewState() {
+      return {
+        id: "interview-saved",
+        projectId: projectContext.id,
+        jobDescription: "前端开发实习生",
+        currentQuestion: 0,
+        questions: [savedQuestion],
+      };
+    },
+    async updateInterviewState(...args) {
+      progress.push(args);
+    },
+    async recordAnswer() {},
+  };
+  const deepSeek = { enabled: false };
+  const { AgentService } = require("../dist/agent/agent.service.js");
+  const service = new AgentService(github, deepSeek, reportStore);
+
+  const result = await service.evaluateAnswer("interview-saved", "使用局部状态，并在需要共享时提升。", "user-test");
+
+  assert.equal(result.questionNumber, 1);
+  assert.equal(progress.length, 1);
+  assert.equal(progress[0][0], "interview-saved");
+});

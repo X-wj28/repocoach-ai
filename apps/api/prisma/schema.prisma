@@ -70,6 +70,8 @@ model Interview {
   jobDescription String            @map("job_description") @db.Text
   status         InterviewStatus   @default(IN_PROGRESS)
   totalQuestions Int               @map("total_questions")
+  questions      Json
+  currentQuestion Int              @default(0) @map("current_question")
   startedAt      DateTime          @default(now()) @map("started_at")
   completedAt    DateTime?         @map("completed_at")
   user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)

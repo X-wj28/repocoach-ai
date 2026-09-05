@@ -105,6 +105,7 @@ export class AgentService {
       projectUrl: projectContext?.url ?? "",
       jobDescription,
       totalQuestions: interviewQuestions.length,
+      questions: interviewQuestions,
     });
     return {
       interviewId,
@@ -117,7 +118,23 @@ export class AgentService {
   }
 
   async evaluateAnswer(interviewId: string, answer: string, userId: string) {
-    const state = this.interviews.get(interviewId);
+    let state = this.interviews.get(interviewId);
+    if (!state) {
+      const saved = await this.reportStore.getInterviewState(interviewId, userId);
+      const restoredQuestions = saved && Array.isArray(saved.questions)
+        ? saved.questions.filter(isValidQuestion)
+        : [];
+      if (saved && restoredQuestions.length > 0) {
+        state = {
+          userId,
+          projectId: saved.projectId,
+          currentQuestion: saved.currentQuestion,
+          questions: restoredQuestions,
+          jobDescription: saved.jobDescription,
+        };
+        this.interviews.set(interviewId, state);
+      }
+    }
     if (!state || state.userId !== userId)
       throw new NotFoundException(
         "面试会话不存在或服务已重启，请重新开始训练。",
@@ -173,6 +190,7 @@ export class AgentService {
     const hasNextQuestion = nextQuestionIndex < state.questions.length;
     state.currentQuestion = nextQuestionIndex;
     this.interviews.set(interviewId, state);
+    await this.reportStore.updateInterviewState(interviewId, state.currentQuestion, state.questions);
 
     const evaluation = {
       interviewId,
@@ -260,6 +278,7 @@ export class AgentService {
     state.currentQuestion += 1;
     if (nextQuestion) state.questions[state.currentQuestion] = nextQuestion;
     this.interviews.set(interviewId, state);
+    await this.reportStore.updateInterviewState(interviewId, state.currentQuestion, state.questions);
     return {
       score: Math.min(10, Math.max(0, Number(parsed.score.toFixed(1)))),
       strengths: parsed.strengths.slice(0, 3),

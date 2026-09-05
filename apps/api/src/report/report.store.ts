@@ -22,6 +22,7 @@ type InterviewRecord = {
   projectUrl: string;
   jobDescription: string;
   totalQuestions: number;
+  questions: Question[];
 };
 
 const dimensions = [
@@ -78,6 +79,27 @@ export class ReportStore {
         projectUrl: interview.projectUrl,
         jobDescription: interview.jobDescription,
         totalQuestions: interview.totalQuestions,
+        questions: interview.questions,
+      },
+    });
+  }
+
+  async updateInterviewState(interviewId: string, currentQuestion: number, questions: Question[]) {
+    await this.prisma.interview.update({
+      where: { id: interviewId },
+      data: { currentQuestion, questions },
+    });
+  }
+
+  async getInterviewState(interviewId: string, userId: string) {
+    return this.prisma.interview.findFirst({
+      where: { id: interviewId, userId },
+      select: {
+        id: true,
+        projectId: true,
+        jobDescription: true,
+        currentQuestion: true,
+        questions: true,
       },
     });
   }
