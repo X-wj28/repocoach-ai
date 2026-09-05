@@ -152,7 +152,7 @@ export function analyzeProject(repoUrl: string, jobDescription: string) {
 }
 
 export function startInterview(projectId: string, jobDescription: string, projectUrl: string) {
-  return request<{ interviewId: string; question: Question; questionNumber: number; totalQuestions: number; provider: string; mode: string }>("/interviews/start", {
+  return request<{ interviewId: string; projectId: string; question: Question; questionNumber: number; totalQuestions: number; provider: string; mode: string }>("/interviews/start", {
     method: "POST",
     body: JSON.stringify({ projectId, jobDescription, projectUrl })
   });

@@ -342,7 +342,9 @@ export default function Home() {
     setActiveNav("面试训练"); setIsStarting(true); setSubmitted(false); setEvaluation(null); setAnswer(""); setNotice(null);
     try {
       const result = await startInterview(project.id, jobDescription, project.url);
-      setInterviewId(result.interviewId); setQuestion(result.question); setQuestionNumber(result.questionNumber); setTotalQuestions(result.totalQuestions); void loadReport(project.id);
+      setInterviewId(result.interviewId); setQuestion(result.question); setQuestionNumber(result.questionNumber); setTotalQuestions(result.totalQuestions);
+      if (result.projectId !== project.id) setProject((current) => ({ ...current, id: result.projectId }));
+      void loadReport(result.projectId);
     } catch {
       setInterviewId(`local-${Date.now()}`); setQuestion(fallbackQuestion); setQuestionNumber(1); setTotalQuestions(4);
       setNotice("后端 API 暂时不可用，已切换到本地演示模式。启动 NestJS 后可恢复真实接口。 ");

@@ -113,6 +113,7 @@ export class AgentService {
     });
     return {
       interviewId,
+      projectId,
       question: interviewQuestions[0],
       questionNumber: 1,
       totalQuestions: interviewQuestions.length,
