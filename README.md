@@ -6,6 +6,13 @@
 
 RepoCoach FE 会读取公开的 React/Next.js 仓库和目标岗位 JD，围绕真实代码生成项目面试题，评价回答，并持续沉淀个人能力报告。项目支持 DeepSeek 真实模型，也提供无需模型密钥的本地兜底模式。
 
+## 线上演示
+
+- 前端工作台：[repocoach-web.onrender.com](https://repocoach-web.onrender.com)
+- API 健康检查：[repocoach-api.onrender.com/api/v1/health](https://repocoach-api.onrender.com/api/v1/health)
+
+首次访问免费实例可能需要等待几十秒唤醒。演示环境只允许读取公开 GitHub 仓库，不会修改仓库内容。
+
 ## 核心能力
 
 - 公开 GitHub 仓库分析：识别技术栈、README、目录树和关键 TypeScript/TSX 文件
@@ -24,7 +31,7 @@ RepoCoach FE 会读取公开的 React/Next.js 仓库和目标岗位 JD，围绕�
 
 ![仓库分析与项目设置](docs/assets/project-settings.png)
 
-所有截图均来自本地 Docker 环境的真实运行界面。面试问题、评价和报告由实际 API 返回，不是静态设计稿。
+面试问题、评价和报告由实际 API 返回，不是静态设计稿。截图可用于快速了解主要用户流程。
 
 ## 简历与面试材料
 
@@ -75,9 +82,9 @@ npm run dev
 
 Windows 上 Docker/WSL 可能保留端口 3000，因此本项目默认使用 3002。
 
-## Online deployment
+## 部署
 
-A production-ready deployment guide for Vercel + Render is available in [docs/deployment.md](docs/deployment.md).
+当前线上环境使用 Render 部署 Web、API 和 PostgreSQL，完整步骤见 [docs/deployment.md](docs/deployment.md)。
 
 ## Docker 一键启动
 
@@ -140,7 +147,7 @@ npm run db:import-sqlite # 导入旧 SQLite 数据，可重复执行
 
 ## 当前范围
 
-当前版本面向公开仓库和文本面试。私有仓库、GitHub OAuth、语音面试和云端部署属于后续迭代。
+当前版本面向公开仓库和文本面试，已提供 Render 线上演示。私有仓库、GitHub OAuth 和语音面试属于后续迭代。
 
 ## License
 

@@ -8,6 +8,8 @@
 
 **RepoCoach FE | AI 驱动的 GitHub 项目深挖与前端面试训练平台**
 
+线上演示：<https://repocoach-web.onrender.com>  ·  API：<https://repocoach-api.onrender.com/api/v1/health>
+
 ### 两到三行版本
 
 基于 Next.js、NestJS、PostgreSQL 和 DeepSeek 构建面向前端实习生的 AI 面试训练平台。用户可导入公开 GitHub 仓库，系统提取 README、目录树和关键 TS/TSX 文件，围绕真实代码与岗位 JD 生成面试题并持久化评分，最终输出 React、Next.js、工程化和性能维度的能力报告。
@@ -58,4 +60,4 @@ Compose 先等待 PostgreSQL health check 通过，API 启动命令应用 Prisma
 
 - GitHub 仓库仅支持公开只读访问。
 - 未设置 DeepSeek Key 时产品使用本地评分兜底，不应宣称每次评分都由大模型生成。
-- 未完成线上域名部署前，简历中应写“Docker 本地部署”，而不是“已上线生产环境”。
+- 当前版本已通过 Render 部署 Web、API 和 PostgreSQL，可在简历中写明线上演示地址；同时保留 Docker Compose 作为本地开发和自托管方案。
