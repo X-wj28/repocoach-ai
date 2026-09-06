@@ -114,10 +114,8 @@ docker compose down
 | `GITHUB_TOKEN`        | 提高 GitHub API 请求额度       | 可选                           |
 | `COOKIE_SECURE`       | HTTPS 部署时启用 Secure Cookie | 本地 `false`                   |
 | `EMAIL_VERIFICATION_REQUIRED` | 注册是否必须完成邮箱验证码 | 本地 `false`，生产建议 `true` |
-| `BREVO_API_KEY`        | Brevo HTTPS 发信 API Key        | 生产必填（开启验证时）          |
-| `GOOGLE_APPS_SCRIPT_URL` | Google Apps Script Web App 地址 | 推荐的 Gmail 发信方式           |
-| `GOOGLE_APPS_SCRIPT_SECRET` | 与 Apps Script 共享的密钥       | 自定义随机字符串                |
-| `EMAIL_FROM`           | Brevo 已验证的发件人邮箱        | 例如 `RepoCoach <maomaotou5528@gmail.com>` |
+| `RESEND_API_KEY`       | Resend HTTPS 发信 API Key       | 生产必填（开启验证时）          |
+| `EMAIL_FROM`           | Resend 已验证的发件人           | 测试可用 `RepoCoach <onboarding@resend.dev>` |
 
 不要提交 `.env`、GitHub Token 或模型 API Key。
 
