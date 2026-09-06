@@ -114,9 +114,8 @@ docker compose down
 | `GITHUB_TOKEN`        | 提高 GitHub API 请求额度       | 可选                           |
 | `COOKIE_SECURE`       | HTTPS 部署时启用 Secure Cookie | 本地 `false`                   |
 | `EMAIL_VERIFICATION_REQUIRED` | 注册是否必须完成邮箱验证码 | 本地 `false`，生产建议 `true` |
-| `EMAIL_SMTP_USER`      | Gmail SMTP 账号                 | 例如 `maomaotou5528@gmail.com` |
-| `EMAIL_SMTP_PASS`      | Gmail 应用专用密码              | 开启两步验证后生成              |
-| `EMAIL_FROM`           | 验证邮件发件人                  | 例如 `RepoCoach <maomaotou5528@gmail.com>` |
+| `BREVO_API_KEY`        | Brevo HTTPS 发信 API Key        | 生产必填（开启验证时）          |
+| `EMAIL_FROM`           | Brevo 已验证的发件人邮箱        | 例如 `RepoCoach <maomaotou5528@gmail.com>` |
 
 不要提交 `.env`、GitHub Token 或模型 API Key。
 

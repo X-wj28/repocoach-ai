@@ -1,118 +1,48 @@
 import { BadGatewayException, Injectable, ServiceUnavailableException } from "@nestjs/common";
-import { connect as connectTcp, type Socket } from "node:net";
-import { connect as connectTls, type TLSSocket } from "node:tls";
-import { setDefaultResultOrder } from "node:dns";
 
-setDefaultResultOrder("ipv4first");
-
-type SmtpSocket = Socket | TLSSocket;
-
-/** Gmail SMTP sender using implicit TLS (465) or STARTTLS (587). */
+/** Sends verification mail through Brevo's HTTPS API (Render-friendly, port 443). */
 @Injectable()
 export class EmailService {
-  private readonly host = process.env.EMAIL_SMTP_HOST?.trim() || "smtp.gmail.com";
-  private readonly port = Number(process.env.EMAIL_SMTP_PORT || 587);
-  private readonly user = process.env.EMAIL_SMTP_USER?.trim();
-  private readonly password = process.env.EMAIL_SMTP_PASS?.replace(/\s/g, "").trim();
-  private readonly from = process.env.EMAIL_FROM?.trim() || this.user;
+  private readonly apiKey = process.env.BREVO_API_KEY?.trim();
+  private readonly from = process.env.EMAIL_FROM?.trim();
+  private readonly senderEmail = this.from?.match(/<([^>]+)>/)?.[1] || this.from;
+  private readonly senderName = this.from?.match(/^([^<]+)</)?.[1]?.trim() || "RepoCoach";
 
   get configured() {
-    return Boolean(this.user && this.password && this.from);
+    return Boolean(this.apiKey && this.senderEmail);
   }
 
   async sendVerificationCode(to: string, code: string) {
     if (!this.configured) {
-      if (process.env.NODE_ENV === "production") throw new ServiceUnavailableException("邮箱验证服务尚未配置，请联系管理员。");
+      if (process.env.NODE_ENV === "production") {
+        throw new ServiceUnavailableException("邮箱验证服务尚未配置，请联系管理员。");
+      }
       console.info(`[email] verification code for ${to}: ${code}`);
       return;
     }
 
-    const fromAddress = this.from?.match(/<([^>]+)>/)?.[1] || this.from;
-    let socket: SmtpSocket | null = null;
-    try {
-      socket = await this.openConnection();
-      await this.command(socket, "EHLO repocoach.local");
-      await this.command(socket, "AUTH LOGIN");
-      await this.command(socket, Buffer.from(this.user!, "utf8").toString("base64"));
-      await this.command(socket, Buffer.from(this.password!, "utf8").toString("base64"));
-      await this.command(socket, `MAIL FROM:<${fromAddress}>`);
-      await this.command(socket, `RCPT TO:<${to}>`);
-      await this.command(socket, "DATA");
-      const message = [
-        `From: ${this.from}`, `To: ${to}`, "Subject: RepoCoach 邮箱验证码",
-        "MIME-Version: 1.0", "Content-Type: text/html; charset=UTF-8", "",
-        `<p>你的 RepoCoach 注册验证码是：</p><p style="font-size:28px;font-weight:700;letter-spacing:6px">${code}</p><p>验证码 10 分钟内有效，请勿将验证码分享给他人。</p>`, ".",
-      ].join("\r\n");
-      socket.write(`${message}\r\n`);
-      await this.readResponse(socket);
-      await this.command(socket, "QUIT");
-    } catch (error) {
-      const detail = error instanceof Error ? error : new Error(String(error));
-      console.error("SMTP verification email failed", {
-        message: detail.message,
-        code: (detail as NodeJS.ErrnoException).code,
-        host: this.host,
-        port: this.port,
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "api-key": this.apiKey!,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        sender: { name: this.senderName, email: this.senderEmail },
+        to: [{ email: to }],
+        subject: "RepoCoach 邮箱验证码",
+        htmlContent: `<p>你的 RepoCoach 注册验证码是：</p><p style="font-size:28px;font-weight:700;letter-spacing:6px">${code}</p><p>验证码 10 分钟内有效，请勿将验证码分享给他人。</p>`,
+      }),
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      console.error("Brevo verification email failed", {
+        status: response.status,
+        message: body.slice(0, 300),
       });
-      throw new BadGatewayException("验证码邮件发送失败，请检查 Gmail 应用专用密码和 SMTP 配置。");
-    } finally {
-      socket?.end();
+      throw new BadGatewayException("验证码邮件发送失败，请检查 Brevo API Key 和发件人配置。");
     }
-  }
-
-  private async openConnection(): Promise<SmtpSocket> {
-    if (this.port === 465) {
-      const socket = await new Promise<TLSSocket>((resolve, reject) => {
-        const value = connectTls({ host: this.host, port: 465, servername: this.host });
-        value.setTimeout(15_000);
-        value.once("error", reject);
-        value.once("timeout", () => reject(new Error("SMTP timeout")));
-        value.once("secureConnect", () => resolve(value));
-      });
-      await this.readResponse(socket);
-      return socket;
-    }
-
-    const plain = await new Promise<Socket>((resolve, reject) => {
-      const value = connectTcp({ host: this.host, port: this.port, family: 4 });
-      value.setTimeout(15_000);
-      value.once("error", reject);
-      value.once("timeout", () => reject(new Error("SMTP timeout")));
-      value.once("connect", () => resolve(value));
-    });
-    await this.readResponse(plain);
-    await this.command(plain, "EHLO repocoach.local");
-    await this.command(plain, "STARTTLS");
-    const secure = connectTls({ socket: plain, servername: this.host });
-    await new Promise<void>((resolve, reject) => {
-      secure.once("error", reject);
-      secure.once("secureConnect", () => resolve());
-    });
-    return secure;
-  }
-
-  private command(socket: SmtpSocket, value: string) {
-    socket.write(`${value}\r\n`);
-    return this.readResponse(socket);
-  }
-
-  private readResponse(socket: SmtpSocket) {
-    return new Promise<string>((resolve, reject) => {
-      let buffer = "";
-      const onData = (chunk: Buffer) => {
-        buffer += chunk.toString("utf8");
-        const lines = buffer.split("\r\n").filter(Boolean);
-        const last = lines.at(-1) || "";
-        if (/^\d{3} /.test(last)) {
-          cleanup();
-          if (!/^[23]\d{2} /.test(last)) reject(new Error(last));
-          else resolve(buffer);
-        }
-      };
-      const onError = (error: Error) => { cleanup(); reject(error); };
-      const cleanup = () => { socket.off("data", onData); socket.off("error", onError); };
-      socket.on("data", onData);
-      socket.once("error", onError);
-    });
   }
 }
