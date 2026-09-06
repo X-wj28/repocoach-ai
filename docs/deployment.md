@@ -56,8 +56,11 @@ Use the internal URL for the API service. It keeps API-to-database traffic insid
 | `DEEPSEEK_BASE_URL` | `https://api.deepseek.com`                              |
 | `GITHUB_TOKEN`      | Optional read-only GitHub token                         |
 | `EMAIL_VERIFICATION_REQUIRED` | `true` to require Gmail code verification        |
-| `RESEND_API_KEY`    | Resend API key for sending verification emails           |
-| `EMAIL_FROM`        | Verified sender, e.g. `RepoCoach <noreply@yourdomain.com>` |
+| `EMAIL_SMTP_HOST`   | `smtp.gmail.com`                                        |
+| `EMAIL_SMTP_PORT`   | `465`                                                    |
+| `EMAIL_SMTP_USER`   | `maomaotou5528@gmail.com`                               |
+| `EMAIL_SMTP_PASS`   | Gmail application password                              |
+| `EMAIL_FROM`        | `RepoCoach <maomaotou5528@gmail.com>`                   |
 
 Render provides a `PORT` value at runtime. The API Dockerfile uses it automatically. On the first boot, the container runs `prisma migrate deploy` before starting NestJS.
 
