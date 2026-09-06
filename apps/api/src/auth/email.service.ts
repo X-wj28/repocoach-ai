@@ -1,6 +1,9 @@
 import { BadGatewayException, Injectable, ServiceUnavailableException } from "@nestjs/common";
 import { connect as connectTcp, type Socket } from "node:net";
 import { connect as connectTls, type TLSSocket } from "node:tls";
+import { setDefaultResultOrder } from "node:dns";
+
+setDefaultResultOrder("ipv4first");
 
 type SmtpSocket = Socket | TLSSocket;
 
@@ -44,7 +47,13 @@ export class EmailService {
       await this.readResponse(socket);
       await this.command(socket, "QUIT");
     } catch (error) {
-      console.error("SMTP verification email failed", error instanceof Error ? error.message : error);
+      const detail = error instanceof Error ? error : new Error(String(error));
+      console.error("SMTP verification email failed", {
+        message: detail.message,
+        code: (detail as NodeJS.ErrnoException).code,
+        host: this.host,
+        port: this.port,
+      });
       throw new BadGatewayException("验证码邮件发送失败，请检查 Gmail 应用专用密码和 SMTP 配置。");
     } finally {
       socket?.end();
@@ -65,7 +74,7 @@ export class EmailService {
     }
 
     const plain = await new Promise<Socket>((resolve, reject) => {
-      const value = connectTcp({ host: this.host, port: this.port });
+      const value = connectTcp({ host: this.host, port: this.port, family: 4 });
       value.setTimeout(15_000);
       value.once("error", reject);
       value.once("timeout", () => reject(new Error("SMTP timeout")));
