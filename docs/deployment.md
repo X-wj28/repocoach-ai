@@ -57,7 +57,7 @@ Use the internal URL for the API service. It keeps API-to-database traffic insid
 | `GITHUB_TOKEN`      | Optional read-only GitHub token                         |
 | `EMAIL_VERIFICATION_REQUIRED` | `true` to require Gmail code verification        |
 | `EMAIL_SMTP_HOST`   | `smtp.gmail.com`                                        |
-| `EMAIL_SMTP_PORT`   | `465`                                                    |
+| `EMAIL_SMTP_PORT`   | `587` (STARTTLS)                                        |
 | `EMAIL_SMTP_USER`   | `maomaotou5528@gmail.com`                               |
 | `EMAIL_SMTP_PASS`   | Gmail application password                              |
 | `EMAIL_FROM`        | `RepoCoach <maomaotou5528@gmail.com>`                   |
