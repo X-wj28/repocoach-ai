@@ -29,24 +29,21 @@ export class AuthService {
     if (emailError) throw new BadRequestException(emailError);
     const name = input.name.trim();
     if (!name) throw new BadRequestException("请输入姓名。");
-    if (await this.authStore.findByEmail(email))
+    const existing = await this.authStore.findByEmail(email);
+    if (existing) {
+      if (this.verificationRequired && !existing.emailVerifiedAt) {
+        await this.sendVerificationCode(existing.id, email);
+        return { user: this.toUser(existing), requiresEmailVerification: true };
+      }
       throw new ConflictException("该邮箱已经注册，请直接登录。");
+    }
     const user = await this.authStore.createUser({
       email,
       name,
       passwordHash: await hashPassword(input.password),
     });
     if (this.verificationRequired) {
-      const code = this.createVerificationCode();
-      await this.authStore.setEmailVerification(
-        user.id,
-        this.hashToken(code),
-        new Date(Date.now() + 10 * 60 * 1000),
-      );
-      await this.emailService?.sendVerificationCode(email, code);
-      if (!this.emailService) {
-        throw new BadRequestException("邮箱验证服务尚未配置，请联系管理员。");
-      }
+      await this.sendVerificationCode(user.id, email);
       return { user, requiresEmailVerification: true };
     }
     return { user, ...(await this.issueSession(user.id)) };
@@ -65,12 +62,7 @@ export class AuthService {
     if (this.verificationRequired && !row.emailVerifiedAt) {
       throw new UnauthorizedException("请先完成邮箱验证，再登录。");
     }
-    const user = {
-      id: row.id,
-      email: row.email,
-      name: row.name,
-      createdAt: row.createdAt.toISOString(),
-    };
+    const user = this.toUser(row);
     return { user, ...(await this.issueSession(user.id)) };
   }
 
@@ -102,13 +94,7 @@ export class AuthService {
     const row = await this.authStore.findByEmail(email);
     if (!row || row.emailVerifiedAt) return { success: true };
     if (!this.emailService) throw new BadRequestException("邮箱验证服务尚未配置，请联系管理员。");
-    const code = this.createVerificationCode();
-    await this.authStore.setEmailVerification(
-      row.id,
-      this.hashToken(code),
-      new Date(Date.now() + 10 * 60 * 1000),
-    );
-    await this.emailService.sendVerificationCode(email, code);
+    await this.sendVerificationCode(row.id, email);
     return { success: true };
   }
 
@@ -137,5 +123,27 @@ export class AuthService {
 
   private createVerificationCode() {
     return String(randomInt(100000, 1000000));
+  }
+
+  private toUser(row: { id: string; email: string; name: string; createdAt: Date }) {
+    return {
+      id: row.id,
+      email: row.email,
+      name: row.name,
+      createdAt: row.createdAt.toISOString(),
+    };
+  }
+
+  private async sendVerificationCode(userId: string, email: string) {
+    if (!this.emailService) {
+      throw new BadRequestException("邮箱验证服务尚未配置，请联系管理员。");
+    }
+    const code = this.createVerificationCode();
+    await this.authStore.setEmailVerification(
+      userId,
+      this.hashToken(code),
+      new Date(Date.now() + 10 * 60 * 1000),
+    );
+    await this.emailService.sendVerificationCode(email, code);
   }
 }

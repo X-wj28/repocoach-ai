@@ -57,7 +57,30 @@ Use the internal URL for the API service. It keeps API-to-database traffic insid
 | `GITHUB_TOKEN`      | Optional read-only GitHub token                         |
 | `EMAIL_VERIFICATION_REQUIRED` | `true` to require Gmail code verification        |
 | `BREVO_API_KEY`     | Brevo HTTPS API key                                     |
-| `EMAIL_FROM`        | Brevo-verified sender, e.g. `RepoCoach <maomaotou5528@gmail.com>` |
+| `GOOGLE_APPS_SCRIPT_URL` | Deployed Google Apps Script Web App URL             |
+| `GOOGLE_APPS_SCRIPT_SECRET` | Shared secret configured in the script             |
+| `EMAIL_FROM`        | `RepoCoach <maomaotou5528@gmail.com>`                   |
+
+### Google Apps Script Gmail bridge
+
+If SMTP is blocked by the hosting provider and Brevo is unavailable, use the
+included `scripts/google-apps-script/Code.gs` file:
+
+1. Open [script.google.com](https://script.google.com) while signed in with
+   `maomaotou5528@gmail.com`, create a new project, and paste the file contents.
+2. In **Project Settings → Script properties**, add
+   `REPOCOACH_EMAIL_SECRET` with a long random value (do not commit it).
+3. Click **Deploy → New deployment → Web app**. Execute as **Me** and allow
+   access to **Anyone**. Approve the Gmail permission prompt, then copy the Web
+   app URL ending in `/exec`.
+4. Set `GOOGLE_APPS_SCRIPT_URL` to that URL and
+   `GOOGLE_APPS_SCRIPT_SECRET` to the same random value in Render's API service.
+5. Keep `EMAIL_FROM=RepoCoach <maomaotou5528@gmail.com>` and redeploy the API.
+
+Open the `/exec` URL in a browser first; it should return
+`{"ok":true,"service":"repocoach-email-bridge"}`. The script sends from the
+Gmail account that owns the deployment, so no Gmail password or SMTP port is
+stored in Render.
 
 Render provides a `PORT` value at runtime. The API Dockerfile uses it automatically. On the first boot, the container runs `prisma migrate deploy` before starting NestJS.
 
