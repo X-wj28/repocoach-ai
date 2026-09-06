@@ -101,17 +101,44 @@ export type InterviewDetail = {
   }>;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+const localApiBase = "http://localhost:4000/api/v1";
+const renderApiBase = "https://repocoach-api.onrender.com/api/v1";
+
+function resolveApiBase() {
+  const configured = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/+$/, "");
+  const pointsToLocalMachine = configured && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\b/i.test(configured);
+  if (configured && !pointsToLocalMachine) return configured;
+  if (typeof window !== "undefined" && window.location.hostname === "repocoach-web.onrender.com") return renderApiBase;
+  return configured || localApiBase;
+}
+
+const API_BASE = resolveApiBase();
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {})
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 25000);
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      signal: controller.signal,
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.headers ?? {})
+      }
+    });
+  } catch (reason) {
+    if (reason instanceof Error && reason.name === "AbortError") {
+      throw new Error("后端服务响应超时。Render 免费实例可能正在唤醒，请等待 30 秒后重试。");
     }
-  });
+    if (reason instanceof TypeError) {
+      throw new Error("无法连接后端服务。请确认 API 已部署并处于 Live 状态；如果服务刚休眠，请稍后重试。");
+    }
+    throw reason;
+  } finally {
+    window.clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     const body = await response.text();

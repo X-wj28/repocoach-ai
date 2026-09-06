@@ -45,11 +45,11 @@ test("registers a user and manages a revocable session", async () => {
   const auth = new AuthService(store);
 
   const registered = await auth.register({
-    email: "Student@Example.com",
+    email: "Student@sample.dev",
     name: "林同学",
     password: "secure-pass-123",
   });
-  assert.equal(registered.user.email, "student@example.com");
+  assert.equal(registered.user.email, "student@sample.dev");
   assert.equal(registered.user.name, "林同学");
   assert.equal(
     (await auth.findByToken(registered.token))?.id,
@@ -57,10 +57,36 @@ test("registers a user and manages a revocable session", async () => {
   );
 
   const loggedIn = await auth.login({
-    email: "student@example.com",
+    email: "student@sample.dev",
     password: "secure-pass-123",
   });
   assert.equal(loggedIn.user.id, registered.user.id);
   await auth.logout(loggedIn.token);
   assert.equal(await auth.findByToken(loggedIn.token), null);
+});
+
+test("rejects malformed and disposable email addresses", async () => {
+  const { AuthService } = require("../dist/auth/auth.service.js");
+  const auth = new AuthService({
+    async findByEmail() {
+      return null;
+    },
+  });
+
+  await assert.rejects(
+    auth.register({
+      email: "not-an-email",
+      name: "测试用户",
+      password: "secure-pass-123",
+    }),
+    /有效邮箱地址/,
+  );
+  await assert.rejects(
+    auth.register({
+      email: "person@example.com",
+      name: "测试用户",
+      password: "secure-pass-123",
+    }),
+    /测试或临时邮箱/,
+  );
 });

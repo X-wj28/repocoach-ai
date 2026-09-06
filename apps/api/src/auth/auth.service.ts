@@ -1,10 +1,12 @@
 import { createHash, randomBytes } from "node:crypto";
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
 import { AuthStore } from "./auth.store";
+import { emailValidationError, normalizeEmail } from "./email-policy";
 import { hashPassword, verifyPassword } from "./password";
 
 const sessionMaxAgeSeconds = 60 * 60 * 24 * 7;
@@ -14,20 +16,27 @@ export class AuthService {
   constructor(private readonly authStore: AuthStore) {}
 
   async register(input: { email: string; name: string; password: string }) {
-    const email = input.email.trim().toLowerCase();
+    const email = normalizeEmail(input.email);
+    const emailError = emailValidationError(email);
+    if (emailError) throw new BadRequestException(emailError);
+    const name = input.name.trim();
+    if (!name) throw new BadRequestException("请输入姓名。");
     if (await this.authStore.findByEmail(email))
       throw new ConflictException("该邮箱已经注册，请直接登录。");
     const user = await this.authStore.createUser({
       email,
-      name: input.name.trim(),
+      name,
       passwordHash: await hashPassword(input.password),
     });
     return { user, ...(await this.issueSession(user.id)) };
   }
 
   async login(input: { email: string; password: string }) {
+    const email = normalizeEmail(input.email);
+    const emailError = emailValidationError(email);
+    if (emailError) throw new BadRequestException(emailError);
     const row = await this.authStore.findByEmail(
-      input.email.trim().toLowerCase(),
+      email,
     );
     if (!row || !(await verifyPassword(input.password, row.passwordHash))) {
       throw new UnauthorizedException("邮箱或密码不正确。");

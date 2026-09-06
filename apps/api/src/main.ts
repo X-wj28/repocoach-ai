@@ -10,11 +10,24 @@ config({ path: resolve(process.cwd(), ".env"), override: false });
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableShutdownHooks();
-  const allowedOrigins = (process.env.WEB_ORIGIN ?? "http://localhost:3002")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-  app.enableCors({ origin: allowedOrigins, credentials: true });
+  const allowedOrigins = new Set([
+    "http://localhost:3002",
+    "https://repocoach-web.onrender.com",
+    ...(process.env.WEB_ORIGIN ?? "")
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+  ].map((origin) => origin.replace(/\/+$/, "")));
+  const isAllowedOrigin = (origin: string) => allowedOrigins.has(origin.replace(/\/+$/, ""));
+  app.enableCors({
+    origin: (origin, callback) => {
+      if (!origin || isAllowedOrigin(origin)) callback(null, true);
+      else callback(null, false);
+    },
+    credentials: true,
+    methods: ["GET", "HEAD", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type"],
+  });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   const port = Number(process.env.PORT ?? 4000);

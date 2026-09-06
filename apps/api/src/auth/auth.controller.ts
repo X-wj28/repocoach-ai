@@ -7,14 +7,16 @@ import {
   Res,
   UseGuards,
 } from "@nestjs/common";
-import { IsEmail, IsString, MaxLength, MinLength } from "class-validator";
+import { IsEmail, IsString, Matches, MaxLength, MinLength } from "class-validator";
 import { AuthService } from "./auth.service";
+import { emailPattern } from "./email-policy";
 import type { AuthenticatedRequest, CookieResponse } from "./auth.types";
 import { clearSessionCookie, createSessionCookie } from "./session-cookie";
 import { SessionGuard } from "./session.guard";
 
 class RegisterDto {
   @IsEmail({}, { message: "请输入有效邮箱。" })
+  @Matches(emailPattern, { message: "请输入有效邮箱地址，例如 name@gmail.com。" })
   email!: string;
 
   @IsString()
@@ -30,6 +32,7 @@ class RegisterDto {
 
 class LoginDto {
   @IsEmail({}, { message: "请输入有效邮箱。" })
+  @Matches(emailPattern, { message: "请输入有效邮箱地址，例如 name@gmail.com。" })
   email!: string;
 
   @IsString()

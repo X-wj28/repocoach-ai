@@ -45,6 +45,8 @@ button { cursor: pointer; }
 .auth-input:focus-within { border-color: #6fa49b; box-shadow: 0 0 0 3px rgba(63,141,130,.11); color: var(--teal); }
 .auth-input input { width: 100%; min-width: 0; border: 0; outline: 0; padding: 11px 0; color: var(--ink); background: transparent; }
 .auth-input input::placeholder { color: #aeb8be; }
+.auth-field-error { display: block; color: #a04d54; font-size: 10px; line-height: 1.45; margin-top: 6px; }
+.auth-field-hint { display: block; color: var(--muted); font-size: 10px; line-height: 1.45; margin-top: 6px; }
 .auth-error { color: #9b4d52; background: #fbf0f0; border: 1px solid #efdada; border-radius: 6px; padding: 10px 11px; font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
 .auth-submit { width: 100%; min-height: 42px; margin-top: 2px; }
 

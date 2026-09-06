@@ -48,6 +48,7 @@ import {
   submitInterviewAnswer,
   User
 } from "@/lib/api";
+import { emailValidationError, normalizeEmail } from "@/lib/validation";
 
 const navItems = [
   { label: "工作台", icon: LayoutDashboard },
@@ -156,15 +157,24 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const handleAuth = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
     setError(null);
+    const normalizedEmail = normalizeEmail(email);
+    const emailIssue = emailValidationError(normalizedEmail);
+    if (emailIssue) {
+      setEmailError(emailIssue);
+      setIsSubmitting(false);
+      return;
+    }
+    setEmailError(null);
     try {
       const result = mode === "register"
-        ? await register({ name: name.trim(), email: email.trim(), password })
-        : await login({ email: email.trim(), password });
+        ? await register({ name: name.trim(), email: normalizedEmail, password })
+        : await login({ email: normalizedEmail, password });
       onAuthenticated(result.user);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "认证失败，请稍后重试。");
@@ -173,7 +183,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void
     }
   };
 
-  return <main className="auth-shell"><section className="auth-brand"><div className="brand-row"><div className="brand-mark"><Sparkles size={18} /></div><div><div className="brand-name">RepoCoach</div><div className="brand-caption">FE INTERVIEW LAB</div></div></div><div className="auth-position"><span>AI 项目面试工作台</span><h1>把真实代码，练成有证据的面试表达</h1><p>导入 GitHub 项目，由 Agent 连续追问、评分并沉淀个人能力报告。</p></div><div className="auth-proof"><span><Github size={15} />代码级提问</span><span><Sparkles size={15} />自适应追问</span><span><BarChart3 size={15} />真实能力报告</span></div></section><section className="auth-form-wrap"><div className="auth-form-heading"><span className="section-kicker"><LockKeyhole size={14} />账号工作区</span><h2>{mode === "login" ? "登录 RepoCoach" : "创建你的账号"}</h2><p>{mode === "login" ? "继续你的项目面试训练。" : "开始建立可持续更新的面试档案。"}</p></div><div className="auth-tabs" role="tablist"><button type="button" className={mode === "login" ? "auth-tab-active" : ""} onClick={() => { setMode("login"); setError(null); }}>登录</button><button type="button" className={mode === "register" ? "auth-tab-active" : ""} onClick={() => { setMode("register"); setError(null); }}>注册</button></div><form className="auth-form" onSubmit={handleAuth}>{mode === "register" && <label><span>姓名</span><div className="auth-input"><UserRound size={16} /><input value={name} onChange={(event) => setName(event.target.value)} placeholder="用于面试报告署名" minLength={2} maxLength={40} required /></div></label>}<label><span>邮箱</span><div className="auth-input"><Mail size={16} /><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" required /></div></label><label><span>密码</span><div className="auth-input"><LockKeyhole size={16} /><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="至少 8 位" minLength={8} maxLength={72} required /></div></label>{error && <div className="auth-error">{error}</div>}<button className="primary-button auth-submit" type="submit" disabled={isSubmitting}>{isSubmitting ? <LoaderCircle size={16} className="spin" /> : mode === "login" ? <LockKeyhole size={16} /> : <UserRound size={16} />}{isSubmitting ? "处理中" : mode === "login" ? "登录" : "创建账号"}</button></form></section></main>;
+  return <main className="auth-shell"><section className="auth-brand"><div className="brand-row"><div className="brand-mark"><Sparkles size={18} /></div><div><div className="brand-name">RepoCoach</div><div className="brand-caption">FE INTERVIEW LAB</div></div></div><div className="auth-position"><span>AI 项目面试工作台</span><h1>把真实代码，练成有证据的面试表达</h1><p>导入 GitHub 项目，由 Agent 连续追问、评分并沉淀个人能力报告。</p></div><div className="auth-proof"><span><Github size={15} />代码级提问</span><span><Sparkles size={15} />自适应追问</span><span><BarChart3 size={15} />真实能力报告</span></div></section><section className="auth-form-wrap"><div className="auth-form-heading"><span className="section-kicker"><LockKeyhole size={14} />账号工作区</span><h2>{mode === "login" ? "登录 RepoCoach" : "创建你的账号"}</h2><p>{mode === "login" ? "继续你的项目面试训练。" : "开始建立可持续更新的面试档案。"}</p></div><div className="auth-tabs" role="tablist"><button type="button" className={mode === "login" ? "auth-tab-active" : ""} onClick={() => { setMode("login"); setError(null); setEmailError(null); }}>登录</button><button type="button" className={mode === "register" ? "auth-tab-active" : ""} onClick={() => { setMode("register"); setError(null); setEmailError(null); }}>注册</button></div><form className="auth-form" onSubmit={handleAuth}>{mode === "register" && <label><span>姓名</span><div className="auth-input"><UserRound size={16} /><input value={name} onChange={(event) => setName(event.target.value)} placeholder="用于面试报告署名" minLength={2} maxLength={40} required /></div></label>}<label><span>邮箱</span><div className="auth-input"><Mail size={16} /><input type="email" value={email} onChange={(event) => { setEmail(event.target.value); if (emailError) setEmailError(null); }} onBlur={() => setEmailError(emailValidationError(email))} placeholder="name@example.com" autoComplete="email" aria-invalid={Boolean(emailError)} required /></div>{emailError && <small className="auth-field-error">{emailError}</small>}{mode === "register" && <small className="auth-field-hint">仅凭输入内容无法确认邮箱归属；正式产品需再发送验证码。</small>}</label><label><span>密码</span><div className="auth-input"><LockKeyhole size={16} /><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="至少 8 位" minLength={8} maxLength={72} autoComplete={mode === "register" ? "new-password" : "current-password"} required /></div></label>{error && <div className="auth-error">{error}</div>}<button className="primary-button auth-submit" type="submit" disabled={isSubmitting}>{isSubmitting ? <LoaderCircle size={16} className="spin" /> : mode === "login" ? <LockKeyhole size={16} /> : <UserRound size={16} />}{isSubmitting ? "处理中" : mode === "login" ? "登录" : "创建账号"}</button></form></section></main>;
 }
 
 type InterviewCardProps = {
