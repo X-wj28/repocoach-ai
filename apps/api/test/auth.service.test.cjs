@@ -45,11 +45,11 @@ test("registers a user and manages a revocable session", async () => {
   const auth = new AuthService(store);
 
   const registered = await auth.register({
-    email: "Student@sample.dev",
+    email: "Student@gmail.com",
     name: "林同学",
     password: "secure-pass-123",
   });
-  assert.equal(registered.user.email, "student@sample.dev");
+  assert.equal(registered.user.email, "student@gmail.com");
   assert.equal(registered.user.name, "林同学");
   assert.equal(
     (await auth.findByToken(registered.token))?.id,
@@ -57,7 +57,7 @@ test("registers a user and manages a revocable session", async () => {
   );
 
   const loggedIn = await auth.login({
-    email: "student@sample.dev",
+    email: "student@gmail.com",
     password: "secure-pass-123",
   });
   assert.equal(loggedIn.user.id, registered.user.id);
@@ -83,10 +83,48 @@ test("rejects malformed and disposable email addresses", async () => {
   );
   await assert.rejects(
     auth.register({
-      email: "person@example.com",
+    email: "person@example.com",
       name: "测试用户",
       password: "secure-pass-123",
     }),
-    /测试或临时邮箱/,
+    /gmail.com/,
   );
+});
+
+test("requires and completes Gmail verification when enabled", async () => {
+  const previous = process.env.EMAIL_VERIFICATION_REQUIRED;
+  process.env.EMAIL_VERIFICATION_REQUIRED = "true";
+  const row = {
+    id: randomUUID(),
+    email: "verify@gmail.com",
+    name: "验证用户",
+    passwordHash: "unused",
+    createdAt: new Date(),
+    emailVerifiedAt: null,
+    emailVerificationCodeHash: null,
+    emailVerificationExpiresAt: null,
+  };
+  let created = false;
+  const store = {
+    async findByEmail() { return created ? row : null; },
+    async createUser() { created = true; return { id: row.id, email: row.email, name: row.name, createdAt: row.createdAt.toISOString() }; },
+    async setEmailVerification(_id, hash, expiresAt) { row.emailVerificationCodeHash = hash; row.emailVerificationExpiresAt = expiresAt; },
+    async markEmailVerified() { row.emailVerifiedAt = new Date(); },
+    async createSession() {},
+  };
+  let sentCode = "";
+  const emailService = { async sendVerificationCode(_email, code) { sentCode = code; } };
+  try {
+    const { AuthService } = require("../dist/auth/auth.service.js");
+    const auth = new AuthService(store, emailService);
+    const registered = await auth.register({ email: row.email, name: row.name, password: "secure-pass-123" });
+    assert.equal(registered.requiresEmailVerification, true);
+    assert.equal(sentCode.length, 6);
+    const verified = await auth.verifyEmail({ email: row.email, code: sentCode });
+    assert.equal(verified.user.email, row.email);
+    assert.ok(row.emailVerifiedAt);
+  } finally {
+    if (previous === undefined) delete process.env.EMAIL_VERIFICATION_REQUIRED;
+    else process.env.EMAIL_VERIFICATION_REQUIRED = previous;
+  }
 });

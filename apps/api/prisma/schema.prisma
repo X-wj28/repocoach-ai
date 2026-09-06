@@ -13,6 +13,9 @@ model User {
   name         String
   passwordHash String        @map("password_hash")
   createdAt    DateTime      @default(now()) @map("created_at")
+  emailVerifiedAt DateTime?  @map("email_verified_at")
+  emailVerificationCodeHash String? @map("email_verification_code_hash")
+  emailVerificationExpiresAt DateTime? @map("email_verification_expires_at")
   sessions     AuthSession[]
   interviews   Interview[]
 

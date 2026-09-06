@@ -49,6 +49,9 @@ button { cursor: pointer; }
 .auth-field-hint { display: block; color: var(--muted); font-size: 10px; line-height: 1.45; margin-top: 6px; }
 .auth-error { color: #9b4d52; background: #fbf0f0; border: 1px solid #efdada; border-radius: 6px; padding: 10px 11px; font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
 .auth-submit { width: 100%; min-height: 42px; margin-top: 2px; }
+.verification-resend, .verification-back { border: 0; background: transparent; color: var(--teal); cursor: pointer; font: inherit; padding: 6px; }
+.verification-resend:disabled { cursor: wait; opacity: .6; }
+.verification-back { color: var(--muted); }
 
 .app-shell { display: flex; min-height: 100vh; }
 .sidebar { width: 252px; background: var(--sidebar); border-right: 1px solid #dde4e1; padding: 24px 16px 18px; display: flex; flex-direction: column; flex-shrink: 0; z-index: 5; }

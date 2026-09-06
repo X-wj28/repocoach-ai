@@ -9,6 +9,7 @@ import { ReportStore } from "./report/report.store";
 import { AuthController } from "./auth/auth.controller";
 import { AuthService } from "./auth/auth.service";
 import { AuthStore } from "./auth/auth.store";
+import { EmailService } from "./auth/email.service";
 import { SessionGuard } from "./auth/session.guard";
 import { PrismaService } from "./database/prisma.service";
 
@@ -23,6 +24,7 @@ import { PrismaService } from "./database/prisma.service";
     PrismaService,
     AuthStore,
     AuthService,
+    EmailService,
     SessionGuard,
     AgentService,
     GitHubService,

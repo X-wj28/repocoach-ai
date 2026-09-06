@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomInt } from "node:crypto";
 import {
   BadRequestException,
   ConflictException,
@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { AuthStore } from "./auth.store";
+import { EmailService } from "./email.service";
 import { emailValidationError, normalizeEmail } from "./email-policy";
 import { hashPassword, verifyPassword } from "./password";
 
@@ -13,7 +14,14 @@ const sessionMaxAgeSeconds = 60 * 60 * 24 * 7;
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly authStore: AuthStore) {}
+  constructor(
+    private readonly authStore: AuthStore,
+    private readonly emailService?: EmailService,
+  ) {}
+
+  private get verificationRequired() {
+    return process.env.EMAIL_VERIFICATION_REQUIRED === "true";
+  }
 
   async register(input: { email: string; name: string; password: string }) {
     const email = normalizeEmail(input.email);
@@ -28,6 +36,19 @@ export class AuthService {
       name,
       passwordHash: await hashPassword(input.password),
     });
+    if (this.verificationRequired) {
+      const code = this.createVerificationCode();
+      await this.authStore.setEmailVerification(
+        user.id,
+        this.hashToken(code),
+        new Date(Date.now() + 10 * 60 * 1000),
+      );
+      await this.emailService?.sendVerificationCode(email, code);
+      if (!this.emailService) {
+        throw new BadRequestException("邮箱验证服务尚未配置，请联系管理员。");
+      }
+      return { user, requiresEmailVerification: true };
+    }
     return { user, ...(await this.issueSession(user.id)) };
   }
 
@@ -41,6 +62,9 @@ export class AuthService {
     if (!row || !(await verifyPassword(input.password, row.passwordHash))) {
       throw new UnauthorizedException("邮箱或密码不正确。");
     }
+    if (this.verificationRequired && !row.emailVerifiedAt) {
+      throw new UnauthorizedException("请先完成邮箱验证，再登录。");
+    }
     const user = {
       id: row.id,
       email: row.email,
@@ -48,6 +72,44 @@ export class AuthService {
       createdAt: row.createdAt.toISOString(),
     };
     return { user, ...(await this.issueSession(user.id)) };
+  }
+
+  async verifyEmail(input: { email: string; code: string }) {
+    const email = normalizeEmail(input.email);
+    const emailError = emailValidationError(email);
+    if (emailError) throw new BadRequestException(emailError);
+    const row = await this.authStore.findByEmail(email);
+    const valid = row?.emailVerificationCodeHash && row.emailVerificationExpiresAt
+      && row.emailVerificationExpiresAt.getTime() > Date.now()
+      && row.emailVerificationCodeHash === this.hashToken(input.code);
+    if (!row || !valid) {
+      throw new BadRequestException("验证码无效或已过期，请重新获取。");
+    }
+    await this.authStore.markEmailVerified(row.id);
+    const user = {
+      id: row.id,
+      email: row.email,
+      name: row.name,
+      createdAt: row.createdAt.toISOString(),
+    };
+    return { user, ...(await this.issueSession(user.id)) };
+  }
+
+  async resendVerification(input: { email: string }) {
+    const email = normalizeEmail(input.email);
+    const emailError = emailValidationError(email);
+    if (emailError) throw new BadRequestException(emailError);
+    const row = await this.authStore.findByEmail(email);
+    if (!row || row.emailVerifiedAt) return { success: true };
+    if (!this.emailService) throw new BadRequestException("邮箱验证服务尚未配置，请联系管理员。");
+    const code = this.createVerificationCode();
+    await this.authStore.setEmailVerification(
+      row.id,
+      this.hashToken(code),
+      new Date(Date.now() + 10 * 60 * 1000),
+    );
+    await this.emailService.sendVerificationCode(email, code);
+    return { success: true };
   }
 
   findByToken(token: string) {
@@ -71,5 +133,9 @@ export class AuthService {
 
   private hashToken(token: string) {
     return createHash("sha256").update(token).digest("hex");
+  }
+
+  private createVerificationCode() {
+    return String(randomInt(100000, 1000000));
   }
 }

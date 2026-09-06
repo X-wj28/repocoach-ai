@@ -156,11 +156,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export function register(input: { email: string; name: string; password: string }) {
-  return request<{ user: User }>("/auth/register", { method: "POST", body: JSON.stringify(input) });
+  return request<{ user: User; requiresEmailVerification: boolean }>("/auth/register", { method: "POST", body: JSON.stringify(input) });
 }
 
 export function login(input: { email: string; password: string }) {
-  return request<{ user: User }>("/auth/login", { method: "POST", body: JSON.stringify(input) });
+  return request<{ user: User; requiresEmailVerification: boolean }>("/auth/login", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function verifyEmail(input: { email: string; code: string }) {
+  return request<{ user: User }>("/auth/verify-email", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function resendVerification(email: string) {
+  return request<{ success: true }>("/auth/resend-verification", { method: "POST", body: JSON.stringify({ email }) });
 }
 
 export function getCurrentUser() {

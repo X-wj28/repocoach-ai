@@ -113,6 +113,9 @@ docker compose down
 | `DEEPSEEK_TIMEOUT_MS` | 模型请求超时与自动降级阈值     | `20000`                        |
 | `GITHUB_TOKEN`        | 提高 GitHub API 请求额度       | 可选                           |
 | `COOKIE_SECURE`       | HTTPS 部署时启用 Secure Cookie | 本地 `false`                   |
+| `EMAIL_VERIFICATION_REQUIRED` | 注册是否必须完成邮箱验证码 | 本地 `false`，生产建议 `true` |
+| `RESEND_API_KEY`       | Resend 发信 API Key             | 生产必填（开启验证时）          |
+| `EMAIL_FROM`           | 验证邮件发件人                  | 例如 `RepoCoach <noreply@yourdomain.com>` |
 
 不要提交 `.env`、GitHub Token 或模型 API Key。
 

@@ -19,6 +19,27 @@ export class AuthStore {
     return this.toUser(row);
   }
 
+  setEmailVerification(userId: string, codeHash: string, expiresAt: Date) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        emailVerificationCodeHash: codeHash,
+        emailVerificationExpiresAt: expiresAt,
+      },
+    });
+  }
+
+  markEmailVerified(userId: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        emailVerifiedAt: new Date(),
+        emailVerificationCodeHash: null,
+        emailVerificationExpiresAt: null,
+      },
+    });
+  }
+
   async createSession(userId: string, tokenHash: string, expiresAt: Date) {
     await this.prisma.authSession.create({
       data: { userId, tokenHash, expiresAt },

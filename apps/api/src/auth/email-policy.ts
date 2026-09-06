@@ -1,4 +1,5 @@
 export const emailPattern = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$/;
+export const gmailPattern = /^[A-Za-z0-9](?:[A-Za-z0-9.]{0,28}[A-Za-z0-9])?@gmail\.com$/i;
 
 const blockedDomains = new Set([
   "example.com",
@@ -32,6 +33,10 @@ export function emailValidationError(value: string) {
     !emailPattern.test(email)
   ) {
     return "请输入有效邮箱地址，例如 name@gmail.com。";
+  }
+
+  if (!gmailPattern.test(email)) {
+    return "目前仅支持 Gmail 邮箱，请使用 name@gmail.com。";
   }
 
   if (blockedDomains.has(domain) || domain.endsWith(".invalid")) {
