@@ -29,6 +29,7 @@ export class EvaluationWorker
   implements OnApplicationBootstrap, OnModuleDestroy
 {
   private timer?: ReturnType<typeof setTimeout>;
+  private timerDueAt?: number;
   private busy = false;
   private wakeRequested = false;
   private stopping = false;
@@ -47,17 +48,26 @@ export class EvaluationWorker
     if (this.stopping) return;
     this.wakeRequested = true;
     if (this.busy) return;
+    const dueAt = Date.now() + delayMs;
+    // Status polling must not push an already scheduled claim into the future.
+    if (this.timer && this.timerDueAt! <= dueAt) return;
     if (this.timer) clearTimeout(this.timer);
+    this.timerDueAt = dueAt;
     this.timer = setTimeout(() => void this.tick(), delayMs);
     this.timer.unref();
   }
   onModuleDestroy() {
     this.stopping = true;
     if (this.timer) clearTimeout(this.timer);
+    this.timer = undefined;
+    this.timerDueAt = undefined;
     this.abort.abort();
   }
   async tick() {
     if (this.busy || this.stopping) return;
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = undefined;
+    this.timerDueAt = undefined;
     this.busy = true;
     this.wakeRequested = false;
     let run: Awaited<ReturnType<EvaluationStore["claim"]>>;

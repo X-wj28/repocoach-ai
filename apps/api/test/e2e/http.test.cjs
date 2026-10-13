@@ -277,8 +277,10 @@ test(
     }
     async function waitRun(id, cookie, expected) {
       const deadline = Date.now() + 10000;
+      let lastRun;
       while (Date.now() < deadline) {
         const run = await json(`/interviews/evaluations/${id}`, { cookie });
+        lastRun = run;
         if (run.status === expected) return run;
         assert.notEqual(
           run.status,
@@ -287,7 +289,17 @@ test(
         );
         await delay(40);
       }
-      assert.fail(`Run did not reach ${expected} within 10 seconds`);
+      assert.fail(
+        `Run did not reach ${expected} within 10 seconds; last state: ${JSON.stringify(
+          {
+            status: lastRun?.status,
+            phase: lastRun?.phase,
+            failureCode: lastRun?.failureCode,
+            evidenceAttempts: lastRun?.evidenceAttempts,
+            scoringAttempts: lastRun?.scoringAttempts,
+          },
+        )}`,
+      );
     }
     async function frames(id, cookie, after) {
       const response = await request(
