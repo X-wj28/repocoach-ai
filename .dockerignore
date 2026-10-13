@@ -9,3 +9,11 @@ coverage
 !.env.example
 *.log
 apps/api/data
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/.env
+**/.env.*
+!**/.env.example
+data

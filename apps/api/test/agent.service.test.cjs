@@ -51,6 +51,14 @@ test("starts an interview without waiting for DeepSeek", async () => {
   assert.equal(result.question.contextPath, "app/products/page.tsx");
   assert.match(result.question.prompt, /数据获取/);
   assert.equal(created.length, 1);
+  assert.deepEqual(created[0].projectContext, projectContext);
+  assert.equal(created[0].questions.length, 4);
+  assert.ok(
+    created[0].questions.every(
+      (question) =>
+        question.contextPath === "app/products/page.tsx" && question.evidence,
+    ),
+  );
 });
 
 test("restores an interview session after an API restart", async () => {
@@ -76,6 +84,9 @@ test("restores an interview session after an API restart", async () => {
   };
   const progress = [];
   const reportStore = {
+    async getRecordedAnswer() {
+      return null;
+    },
     async getInterviewState() {
       return {
         id: "interview-saved",
@@ -83,20 +94,27 @@ test("restores an interview session after an API restart", async () => {
         jobDescription: "前端开发实习生",
         currentQuestion: 0,
         questions: [savedQuestion],
+        status: "IN_PROGRESS",
       };
     },
-    async updateInterviewState(...args) {
-      progress.push(args);
+    async recordAnswer(input) {
+      progress.push(input);
+      return input.evaluation;
     },
-    async recordAnswer() {},
   };
   const deepSeek = { enabled: false };
   const { AgentService } = require("../dist/agent/agent.service.js");
   const service = new AgentService(github, deepSeek, reportStore);
 
-  const result = await service.evaluateAnswer("interview-saved", "使用局部状态，并在需要共享时提升。", "user-test");
+  const result = await service.evaluateAnswer(
+    "interview-saved",
+    "使用局部状态，并在需要共享时提升。",
+    "user-test",
+    savedQuestion.id,
+  );
 
   assert.equal(result.questionNumber, 1);
   assert.equal(progress.length, 1);
-  assert.equal(progress[0][0], "interview-saved");
+  assert.equal(progress[0].interviewId, "interview-saved");
+  assert.equal(progress[0].questionNumber, 1);
 });

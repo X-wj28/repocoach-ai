@@ -18,6 +18,8 @@ model User {
   emailVerificationExpiresAt DateTime? @map("email_verification_expires_at")
   sessions     AuthSession[]
   interviews   Interview[]
+  memoryEpoch  Int           @default(0) @map("memory_epoch")
+  trainingMemories TrainingMemory[]
 
   @@map("users")
 }
@@ -41,6 +43,9 @@ model ProjectSnapshot {
   stack         Json
   readmePreview String   @map("readme_preview") @db.Text
   files         Json
+  commitSha     String?  @map("commit_sha")
+  manifest      Json?
+  treeTruncated Boolean  @default(false) @map("tree_truncated")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   @@map("project_snapshots")
@@ -75,10 +80,13 @@ model Interview {
   totalQuestions Int               @map("total_questions")
   questions      Json
   currentQuestion Int              @default(0) @map("current_question")
+  projectContext Json?             @map("project_context")
+  practiceFocus Json?              @map("practice_focus")
   startedAt      DateTime          @default(now()) @map("started_at")
   completedAt    DateTime?         @map("completed_at")
   user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   answers        InterviewAnswer[]
+  evaluationRuns EvaluationRun[]
 
   @@index([userId, projectId, startedAt])
   @@map("interviews")
@@ -94,14 +102,90 @@ model InterviewAnswer {
   dimension      InterviewDimension
   difficulty     InterviewDifficulty
   answer         String              @db.Text
-  score          Float
+  score          Float?
   strengths      Json
   improvements   Json
   provider       String
+  evaluation     Json?
   answeredAt     DateTime            @default(now()) @map("answered_at")
   interview      Interview           @relation(fields: [interviewId], references: [id], onDelete: Cascade)
 
   @@unique([interviewId, questionNumber])
   @@index([interviewId, answeredAt])
   @@map("interview_answers")
+}
+
+enum EvaluationRunStatus {
+  EVIDENCE_PENDING
+  EVIDENCE_RUNNING
+  EVIDENCE_FAILED
+  SCORING_PENDING
+  SCORING_RUNNING
+  SCORING_FAILED
+  COMPLETED
+}
+
+model EvaluationRun {
+  id String @id @default(uuid())
+  interviewId String @map("interview_id")
+  questionNumber Int @map("question_number")
+  questionId String @map("question_id")
+  answer String @db.Text
+  questions Json
+  projectContext Json @map("project_context")
+  evidence Json?
+  trace Json?
+  evaluation Json?
+  status EvaluationRunStatus @default(EVIDENCE_PENDING)
+  evidenceAttempts Int @default(0) @map("evidence_attempts")
+  scoringAttempts Int @default(0) @map("scoring_attempts")
+  leaseToken String? @map("lease_token")
+  leaseExpiresAt DateTime? @map("lease_expires_at")
+  failureCode String? @map("failure_code")
+  rubricVersion String @map("rubric_version")
+  promptVersion String @map("prompt_version")
+  model String
+  memoryEpoch Int @default(0) @map("memory_epoch")
+  lastEventSeq Int @default(0) @map("last_event_seq")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  events EvaluationEvent[]
+  trainingMemories TrainingMemory[]
+
+  @@unique([interviewId, questionNumber])
+  @@index([status, leaseExpiresAt, createdAt])
+  @@map("evaluation_runs")
+}
+
+model EvaluationEvent {
+  id String @id @default(uuid())
+  runId String @map("run_id")
+  sequence Int
+  type String
+  payload Json
+  createdAt DateTime @default(now()) @map("created_at")
+  run EvaluationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, sequence])
+  @@map("evaluation_events")
+}
+
+model TrainingMemory {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  projectId String @map("project_id")
+  runId String @map("run_id")
+  criterion String
+  dimension String
+  score Int
+  reason String @db.Text
+  evidenceIds Json @map("evidence_ids")
+  createdAt DateTime @default(now()) @map("created_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  run EvaluationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, runId, criterion])
+  @@index([userId, projectId, createdAt])
+  @@map("training_memories")
 }

@@ -5,7 +5,9 @@ COPY package.json package-lock.json ./
 COPY apps/web/package.json ./apps/web/package.json
 COPY apps/api/package.json ./apps/api/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
-RUN npm ci --no-audit --no-fund
+# The web image does not use Prisma. API generation runs explicitly in its
+# own Dockerfile; skipping install scripts avoids downloading unused engines.
+RUN npm ci --no-audit --no-fund --ignore-scripts
 
 FROM dependencies AS build
 ARG NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1

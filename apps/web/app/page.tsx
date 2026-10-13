@@ -51,6 +51,11 @@ import {
   User
 } from "@/lib/api";
 import { emailValidationError, normalizeEmail } from "@/lib/validation";
+import { EvidenceTraceDetails } from "./components/evidence-trace";
+import { RubricDetails } from "./components/rubric-details";
+import { watchEvaluationRun, retryEvaluationRun, type EvaluationRun, type RunEvent, type PracticeFocus } from "@/lib/api";
+import { RunTimeline } from "./components/run-timeline";
+import { TrainingMemoryPanel } from "./components/training-memory";
 
 const navItems = [
   { label: "工作台", icon: LayoutDashboard },
@@ -87,7 +92,7 @@ const fallbackQuestion: Question = {
   difficulty: "进阶"
 };
 
-function localEvaluation(interviewId: string, answer: string): Evaluation {
+function localEvaluation(interviewId: string, answer: string, questionNumber: number): Evaluation {
   const normalized = answer.toLowerCase();
   const matched = ["ssr", "缓存", "cache", "服务端", "预取", "loading", "错误"].filter((word) => normalized.includes(word)).length;
   const score = Math.min(10, Math.max(4.8, 5.4 + matched * 0.7 + Math.min(answer.length, 500) / 500));
@@ -97,7 +102,7 @@ function localEvaluation(interviewId: string, answer: string): Evaluation {
     score: Number(score.toFixed(1)),
     strengths: ["能够从首屏体验出发解释数据获取方案", "回答与当前项目场景相关"],
     improvements: ["补充缓存失效和客户端交互的衔接策略", "说明异常状态和 loading 状态如何统一处理"],
-    nextQuestion: {
+    nextQuestion: questionNumber >= 2 ? undefined : {
       id: "react-state-boundary",
       prompt: "项目中哪些状态应该留在组件内部，哪些状态值得提升或放进全局状态？你的判断标准是什么？",
       contextPath: "src/store/cart.ts",
@@ -105,10 +110,10 @@ function localEvaluation(interviewId: string, answer: string): Evaluation {
       difficulty: "基础"
     },
     questionNumber: 2,
-    totalQuestions: 4,
-    completed: false,
+    totalQuestions: 2,
+    completed: questionNumber >= 2,
     provider: "local-mock",
-    note: "后端暂时不可用，当前使用本地演示模式。"
+    note: "当前是两题本地演示，回答不会保存，也不计入能力评分。"
   };
 }
 
@@ -117,7 +122,8 @@ function downloadInterviewReport(interview: InterviewDetail) {
     `# RepoCoach 面试复盘：${interview.projectName}`,
     "",
     `- 状态：${interview.status === "completed" ? "已完成" : "进行中"}`,
-    `- 平均分：${interview.averageScore.toFixed(1)} / 10`,
+    `- 模型平均分：${interview.scoredQuestions ? interview.averageScore.toFixed(1) + " / 10" : "暂无模型评价"}`,
+    `- 模型评价：${interview.scoredQuestions} 题；规则演示：${interview.demoQuestions} 题`,
     `- 开始时间：${formatSessionTime(interview.startedAt)}`,
     `- 目标岗位：${interview.jobDescription || "前端开发实习生"}`,
     "",
@@ -127,7 +133,7 @@ function downloadInterviewReport(interview: InterviewDetail) {
       item.question,
       "",
       `代码位置：\`${item.contextPath}\`  `,
-      `评分：**${item.score.toFixed(1)} / 10**`,
+      `${item.provider === "deepseek" ? "模型评分" : "规则演示分（不计入能力评分）"}：**${(item.score === null ? "无法判断" : item.score.toFixed(1))} / 10**`,
       "",
       "### 我的回答",
       "",
@@ -140,6 +146,10 @@ function downloadInterviewReport(interview: InterviewDetail) {
       "### 可以改进",
       "",
       ...item.improvements.map((improvement) => `- ${improvement}`),
+      ...(item.rubric ? ["", "### 四项评分与依据", "", ...item.rubric.criteria.flatMap(criterion => [
+        `- ${criterion.key}：${criterion.score === null ? "无法判断" : criterion.score + " / 4"}；${criterion.reason}`,
+        ...criterion.evidenceIds.flatMap(id => { const source = item.evidence?.items.find(source => source.id === id); return source ? [`  - ${source.path}:${source.startLine}–${source.endLine}`, "", "```", source.snippet, "```", ""] : []; }),
+      ])] : []),
       ""
     ])
   ];
@@ -236,6 +246,10 @@ type InterviewCardProps = {
   submitted: boolean;
   isSubmitting: boolean;
   isStarting: boolean;
+  pendingRun: EvaluationRun | null;
+  runEvents: RunEvent[];
+  connection: string;
+  onRetry: () => void;
   onAnswerChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onNext: () => void;
@@ -250,6 +264,10 @@ function InterviewCard({
   submitted,
   isSubmitting,
   isStarting,
+  pendingRun,
+  runEvents,
+  connection,
+  onRetry,
   onAnswerChange,
   onSubmit,
   onNext
@@ -262,9 +280,11 @@ function InterviewCard({
       </div>
       <div className="question-body">
         <p className="question-text">{question.prompt}</p>
-        <div className="question-context"><FileCode2 size={15} /><span>问题来自</span><code>{question.contextPath}</code><span className="context-divider" /><span>{question.dimension === "nextjs" ? "Next.js 数据获取" : "React 工程实践"}</span></div>
+        <div className="question-context"><FileCode2 size={15} /><span>问题来自</span><code>{question.contextPath}</code><span className="context-divider" /><span>{{ nextjs: "Next.js 应用", react: "React 基础", engineering: "工程化", performance: "性能意识" }[question.dimension]}</span></div>
+        {question.evidence && <details className="code-evidence"><summary>查看本次训练的代码依据 · 第 {question.evidence.startLine}–{question.evidence.endLine} 行</summary><pre><code>{question.evidence.snippet}</code></pre></details>}
       </div>
-      {!submitted ? (
+      <RunTimeline runId={pendingRun?.id} events={runEvents} connection={connection} />
+      {pendingRun && pendingRun.status !== "completed" ? <div className="feedback-box" aria-live="polite"><strong>{pendingRun.status === "failed" ? "评价尚未完成" : pendingRun.phase === "evidence" ? "正在查证代码" : "正在生成四项评价"}</strong><p>回答已保存。{pendingRun.status === "failed" ? pendingRun.phase === "scoring" ? "当前题目保持不变。评分重试会使用已保存的代码证据。" : "当前题目保持不变，可以重新查证代码。" : "可以刷新页面，任务进度会自动恢复。"}</p><p className="saved-answer">{pendingRun.answer}</p>{pendingRun.status === "failed" && <><p>{pendingRun.failureCode === "MODEL_CONFIG_CHANGED" ? "模型配置已变化，请恢复提交时的模型配置。" : pendingRun.retryable ? "服务暂不可用或评价格式未通过校验，可以重试当前阶段。" : "已达到本阶段的尝试上限，请开始新的训练或联系维护者。"}</p>{pendingRun.retryable && <button type="button" className="primary-button" onClick={onRetry} disabled={isSubmitting}>重试{pendingRun.phase === "scoring" ? "评分" : "取证"}</button>}</>}</div> : !submitted ? (
         <form onSubmit={onSubmit}>
           <label className="answer-label" htmlFor="answer">你的回答</label>
           <textarea id="answer" value={answer} onChange={(event) => onAnswerChange(event.target.value)} placeholder="先说你的判断，再解释取舍和具体实现……" disabled={isSubmitting || isStarting} />
@@ -272,7 +292,10 @@ function InterviewCard({
         </form>
       ) : (
         <div className="feedback-box">
-          <div className="feedback-heading"><div className="feedback-icon"><Check size={17} /></div><div><strong>回答已记录</strong><span>{evaluation?.provider === "local-mock" ? "本地演示评分已生成" : "Agent 已完成分析"}</span></div><span className="score-badge">{evaluation?.score ?? "-"} / 10</span></div>
+          <div className="feedback-heading"><div className="feedback-icon"><Check size={17} /></div><div><strong>反馈已生成</strong><span>{evaluation?.provider === "local-mock" ? "无分演示" : "Agent 已完成分析"}</span></div><span className="score-badge">{evaluation?.score === null ? "无法判断" : `${evaluation?.score ?? "-"} / 10`}</span></div>
+          <p className="feedback-note">{evaluation?.note}</p>
+          <EvidenceTraceDetails trace={evaluation?.trace} />
+          <RubricDetails rubric={evaluation?.rubric} evidence={evaluation?.evidence} />
           <div className="feedback-columns"><div><span className="feedback-label">做得不错</span><p>{evaluation?.strengths[0] ?? "回答已保存"}</p></div><div><span className="feedback-label">可以补充</span><p>{evaluation?.improvements[0] ?? "继续补充实现细节"}</p></div></div>
           <button className="primary-button full-button" type="button" onClick={onNext}>{evaluation?.nextQuestion ? <><Play size={15} />继续下一题</> : <><BarChart3 size={15} />查看能力报告</>}</button>
         </div>
@@ -296,6 +319,11 @@ export default function Home() {
   const [interviewId, setInterviewId] = useState<string | null>(null);
   const [answer, setAnswer] = useState("");
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
+  const [pendingRun, setPendingRun] = useState<EvaluationRun | null>(null);
+  const [runEvents, setRunEvents] = useState<RunEvent[]>([]);
+  const [connection, setConnection] = useState("");
+  const [practiceFocus, setPracticeFocus] = useState<PracticeFocus[]>([]);
+  const [memoryRevision, setMemoryRevision] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [report, setReport] = useState<CapabilityReport | null>(null);
   const [isReportLoading, setIsReportLoading] = useState(false);
@@ -347,6 +375,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!workspaceReady || !currentUser) return;
+    setPracticeFocus([]);
     let cancelled = false;
     getActiveInterview(project.id)
       .then((active) => {
@@ -357,7 +386,9 @@ export default function Home() {
         setTotalQuestions(active.totalQuestions);
         setSubmitted(false);
         setEvaluation(null);
-        setAnswer("");
+        setAnswer(active.pendingRun?.answer ?? "");
+        setPendingRun(active.pendingRun ?? null);
+        setPracticeFocus(active.practiceFocus ?? []);
       })
       .catch(() => undefined);
     return () => { cancelled = true; };
@@ -379,6 +410,22 @@ export default function Home() {
     }
   }, []);
 
+  const runId = pendingRun?.id;
+  const runStatus = pendingRun?.status;
+  const runIsActive = runStatus === "pending" || runStatus === "running";
+  useEffect(() => { setRunEvents([]); setConnection(""); }, [runId]);
+  useEffect(() => {
+    if (!runId || runId === "legacy" || !currentUser || !runIsActive) return;
+    return watchEvaluationRun(runId, {
+      onState(run) {
+        setPendingRun(run);
+        if (run.status === "completed" && run.evaluation) { setEvaluation(run.evaluation); setSubmitted(true); setMemoryRevision(value => value + 1); void loadReport(project.id); }
+      },
+      onEvent(event) { setRunEvents(old => old.some(item => item.sequence === event.sequence) ? old : [...old, event]); },
+      onConnection: setConnection,
+    });
+  }, [currentUser, loadReport, project.id, runId, runIsActive]);
+
   useEffect(() => {
     if (currentUser) void loadReport(project.id);
   }, [currentUser, loadReport, project.id]);
@@ -390,40 +437,58 @@ export default function Home() {
   };
 
   const handleStartTraining = async () => {
-    setActiveNav("面试训练"); setIsStarting(true); setSubmitted(false); setEvaluation(null); setAnswer(""); setNotice(null);
+    setPendingRun(null);
+    setPracticeFocus([]);
+    setActiveNav("面试训练"); setIsStarting(true); setSubmitted(false); setEvaluation(null); setAnswer(""); setNotice(null); setInterviewId(null);
+    if (project.id === "demo-project") {
+      setInterviewId(`local-${Date.now()}`); setQuestion(fallbackQuestion); setQuestionNumber(1); setTotalQuestions(2); setIsStarting(false);
+      setNotice("当前为示例项目的本地演示，回答不会保存。导入你的 GitHub 仓库后可开始真实训练。");
+      return;
+    }
     try {
       const result = await startInterview(project.id, jobDescription, project.url);
       setInterviewId(result.interviewId); setQuestion(result.question); setQuestionNumber(result.questionNumber); setTotalQuestions(result.totalQuestions);
+      setPracticeFocus(result.practiceFocus ?? []);
       if (result.projectId !== project.id) setProject((current) => ({ ...current, id: result.projectId }));
       void loadReport(result.projectId);
-    } catch {
-      setInterviewId(`local-${Date.now()}`); setQuestion(fallbackQuestion); setQuestionNumber(1); setTotalQuestions(4);
-      setNotice("后端 API 暂时不可用，已切换到本地演示模式。启动 NestJS 后可恢复真实接口。 ");
+    } catch (reason) {
+      setNotice(reason instanceof Error ? reason.message : "训练启动失败，请稍后重试。");
     } finally { setIsStarting(false); }
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); if (!answer.trim() || isSubmitting) return;
-    const currentInterviewId = interviewId ?? `local-${Date.now()}`; setInterviewId(currentInterviewId); setIsSubmitting(true); setNotice(null);
+    if (!interviewId) { setNotice("请先开始一次训练。"); return; }
+    if (interviewId.startsWith("local-")) { setEvaluation(localEvaluation(interviewId, answer.trim(), questionNumber)); setSubmitted(true); return; }
+    setIsSubmitting(true); setNotice(null);
     try {
-      const result = await submitInterviewAnswer(currentInterviewId, answer.trim());
-      setEvaluation(result); setQuestionNumber(result.questionNumber ?? questionNumber); setTotalQuestions(result.totalQuestions ?? totalQuestions); setSubmitted(true); void loadReport(project.id);
-    } catch {
-      const result = localEvaluation(currentInterviewId, answer.trim()); setEvaluation(result); setQuestionNumber(result.questionNumber ?? 2); setSubmitted(true);
-      setNotice("回答接口未连接，已用本地规则生成反馈。 ");
+      const result = await submitInterviewAnswer(interviewId, answer.trim(), question.id);
+      setPendingRun(result);
+      if (result.status === "completed" && result.evaluation) { setEvaluation(result.evaluation); setSubmitted(true); void loadReport(project.id); }
+    } catch (reason) {
+      setNotice(`${reason instanceof Error ? reason.message : "提交失败。"} 回答已保留，你可以重试提交。`);
     } finally { setIsSubmitting(false); }
   };
 
   const handleNext = () => {
+    setPendingRun(null);
     if (evaluation?.nextQuestion) { setQuestion(evaluation.nextQuestion); setQuestionNumber(evaluation.questionNumber ?? questionNumber + 1); setSubmitted(false); setEvaluation(null); setAnswer(""); }
     else { setActiveNav("能力报告"); void loadReport(project.id); }
+  };
+
+  const handleRetryEvaluation = async () => {
+    if (!pendingRun || isSubmitting) return;
+    setIsSubmitting(true); setNotice(null);
+    try { setPendingRun(await retryEvaluationRun(pendingRun.id)); }
+    catch (reason) { setNotice(reason instanceof Error ? reason.message : "重试失败，回答和证据仍已保存。"); }
+    finally { setIsSubmitting(false); }
   };
 
   const handleAnalyze = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); const normalizedUrl = repoUrl.trim().replace(/\/$/, "");
     if (!/^https:\/\/github\.com\/[^/]+\/[^/]+$/.test(normalizedUrl)) { setNotice("请输入类似 https://github.com/用户名/仓库名 的公开 GitHub 地址。 "); return; }
     setIsAnalyzing(true); setNotice(null);
-    try { const result = await analyzeProject(normalizedUrl, jobDescription.trim()); setProject(result); setRepoUrl(result.url); setInterviewId(null); setReport(null); setProjectModalOpen(false); setNotice(`项目 ${result.name} 已分析完成，可以开始面试。`); }
+    try { const result = await analyzeProject(normalizedUrl, jobDescription.trim()); setPendingRun(null); setProject(result); setRepoUrl(result.url); setInterviewId(null); setReport(null); setProjectModalOpen(false); setNotice(`项目 ${result.name} 已分析完成，可以开始面试。`); }
     catch (error) { setNotice(`项目分析失败：${error instanceof Error ? error.message : "请检查后端、Token 和网络配置。"}`); }
     finally { setIsAnalyzing(false); }
   };
@@ -447,6 +512,8 @@ export default function Home() {
       await logout();
     } finally {
       setCurrentUser(null);
+      setPendingRun(null);
+      setPracticeFocus([]);
       setInterviewId(null);
       setReport(null);
       setActiveNav("工作台");
@@ -464,13 +531,14 @@ export default function Home() {
 
   const renderDashboard = () => <>
     <div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" />周三，准备好了吗</div><h1>把你的项目，练成面试答案</h1><p>Agent 会围绕真实代码发问，帮你找到项目表达中的空白。</p></div><button className="primary-button" onClick={handleStartTraining} disabled={isStarting}>{isStarting ? <LoaderCircle size={16} className="spin" /> : <Play size={16} />} {isStarting ? "准备中" : "开始一次训练"}</button></div>
-    <div className="stats-grid"><div className="stat-card stat-card-main"><div className="stat-top"><span>项目准备度</span><Target size={17} /></div><div className="stat-value">{progress}<small>/100</small></div><div className="progress-track"><span style={{ width: `${progress}%` }} /></div><div className="stat-foot">基于 {report?.answeredQuestions ?? 0} 道真实回答</div></div><div className="stat-card"><div className="stat-top"><span>完成训练</span><CheckCircle2 size={17} /></div><div className="stat-value">{report?.completedInterviews ?? 0}<small> 次</small></div><div className="stat-foot">完整完成四题计为一次</div></div><div className="stat-card"><div className="stat-top"><span>已覆盖主题</span><BookOpen size={17} /></div><div className="stat-value">{report?.coveredTopics ?? 0}<small> 个</small></div><div className="stat-foot">来自实际项目文件</div></div><div className="stat-card"><div className="stat-top"><span>待强化</span><Clock3 size={17} /></div><div className="stat-value stat-value-small">{weakestDimension?.label ?? "等待数据"}</div><div className="stat-foot">完成回答后自动更新</div></div></div>
+    <div className="stats-grid"><div className="stat-card stat-card-main"><div className="stat-top"><span>项目准备度</span><Target size={17} /></div><div className="stat-value">{progress}<small>/100</small></div><div className="progress-track"><span style={{ width: `${progress}%` }} /></div><div className="stat-foot">基于 {report?.scoredQuestions ?? 0} 道模型评价</div></div><div className="stat-card"><div className="stat-top"><span>完成训练</span><CheckCircle2 size={17} /></div><div className="stat-value">{report?.completedInterviews ?? 0}<small> 次</small></div><div className="stat-foot">完整完成四题计为一次</div></div><div className="stat-card"><div className="stat-top"><span>已覆盖主题</span><BookOpen size={17} /></div><div className="stat-value">{report?.coveredTopics ?? 0}<small> 个</small></div><div className="stat-foot">来自实际项目文件</div></div><div className="stat-card"><div className="stat-top"><span>待强化</span><Clock3 size={17} /></div><div className="stat-value stat-value-small">{weakestDimension?.label ?? "等待数据"}</div><div className="stat-foot">完成回答后自动更新</div></div></div>
     <ProjectContext project={project} onChange={() => setProjectModalOpen(true)} />
-    <div className="dashboard-grid"><InterviewCard question={question} questionNumber={questionNumber} totalQuestions={totalQuestions} answer={answer} evaluation={evaluation} submitted={submitted} isSubmitting={isSubmitting} isStarting={isStarting} onAnswerChange={setAnswer} onSubmit={handleSubmit} onNext={handleNext} /><SignalPanel report={report} isLoading={isReportLoading} onOpenReport={() => handleNav("能力报告")} /></div>
+    <div className="dashboard-grid"><InterviewCard question={question} questionNumber={questionNumber} totalQuestions={totalQuestions} answer={answer} evaluation={evaluation} submitted={submitted} isSubmitting={isSubmitting} isStarting={isStarting} pendingRun={pendingRun} runEvents={runEvents} connection={connection} onRetry={handleRetryEvaluation} onAnswerChange={setAnswer} onSubmit={handleSubmit} onNext={handleNext} /><SignalPanel report={report} isLoading={isReportLoading} onOpenReport={() => handleNav("能力报告")} /></div>
+    <TrainingMemoryPanel key={currentUser.id + project.id} projectId={project.id} revision={memoryRevision} focus={practiceFocus} onReview={handleOpenSession} onCleared={() => setMemoryRevision(value => value + 1)} />
     <SessionsPanel report={report} isLoading={isReportLoading} onOpenReport={() => handleNav("能力报告")} onOpenSession={handleOpenSession} />
   </>;
 
-  const renderTraining = () => <><div className="page-heading compact-heading"><div><div className="eyebrow"><span className="eyebrow-line" />训练空间</div><h1>项目深挖面试</h1><p>围绕 {project.name} 的 React / Next.js 技术面试。</p></div><span className="mode-chip"><ShieldCheck size={14} />公开仓库只读</span></div>{isStarting ? <InterviewStartingCard projectName={project.name} /> : !interviewId ? <section className="empty-training panel"><div className="empty-icon"><Play size={21} /></div><h2>准备开始一次项目面试</h2><p>Agent 会先分析项目上下文，再根据你的回答继续追问。</p><button className="primary-button" onClick={handleStartTraining}><Play size={16} />开始训练</button></section> : <InterviewCard question={question} questionNumber={questionNumber} totalQuestions={totalQuestions} answer={answer} evaluation={evaluation} submitted={submitted} isSubmitting={isSubmitting} isStarting={isStarting} onAnswerChange={setAnswer} onSubmit={handleSubmit} onNext={handleNext} />}</>;
+  const renderTraining = () => <><div className="page-heading compact-heading"><div><div className="eyebrow"><span className="eyebrow-line" />训练空间</div><h1>项目深挖面试</h1><p>围绕 {project.name} 的 React / Next.js 技术面试。</p></div><span className="mode-chip"><ShieldCheck size={14} />公开仓库只读</span></div>{isStarting ? <InterviewStartingCard projectName={project.name} /> : !interviewId ? <section className="empty-training panel"><div className="empty-icon"><Play size={21} /></div><h2>准备开始一次项目面试</h2><p>Agent 会先分析项目上下文，再根据你的回答继续追问。</p><button className="primary-button" onClick={handleStartTraining}><Play size={16} />开始训练</button></section> : <InterviewCard question={question} questionNumber={questionNumber} totalQuestions={totalQuestions} answer={answer} evaluation={evaluation} submitted={submitted} isSubmitting={isSubmitting} isStarting={isStarting} pendingRun={pendingRun} runEvents={runEvents} connection={connection} onRetry={handleRetryEvaluation} onAnswerChange={setAnswer} onSubmit={handleSubmit} onNext={handleNext} />}<TrainingMemoryPanel key={currentUser.id + project.id} projectId={project.id} revision={memoryRevision} focus={practiceFocus} onReview={handleOpenSession} onCleared={() => setMemoryRevision(value => value + 1)} /></>;
 
   const renderReport = () => <>
     <div className="page-heading compact-heading">
@@ -480,7 +548,7 @@ export default function Home() {
     {isReportLoading && !report ? (
       <section className="empty-report panel"><LoaderCircle size={22} className="spin" /><h2>正在整理训练数据</h2><p>读取评分和能力维度，请稍候。</p></section>
     ) : !report?.hasData ? (
-      <section className="empty-report panel"><BarChart3 size={24} /><h2>还没有可分析的回答</h2><p>完成至少一道项目面试题后，这里会生成真实能力报告。</p><button className="primary-button" onClick={handleStartTraining}><Play size={15} />开始第一次训练</button></section>
+      <section className="empty-report panel"><BarChart3 size={24} /><h2>{report?.unjudgedQuestions ? "评价已保存，部分依据不足" : report?.demoQuestions ? "回答已保存，等待模型评价" : "还没有可比较的模型评分"}</h2><p>{report?.unjudgedQuestions ? `有 ${report.unjudgedQuestions} 道评价存在无法判断的维度。请在训练复盘中查看具体证据缺口，补充代码后再训练。` : report?.demoQuestions ? `已有 ${report.demoQuestions} 道规则演示反馈，不计入能力评分。模型服务可用后可开始新的训练。` : "完成一道具有完整依据的项目面试评价后，这里会生成能力报告。"}</p><button className="primary-button" onClick={handleStartTraining}><Play size={15} />开始训练</button></section>
     ) : <>
       <section className="report-hero panel">
         <div><span className="section-kicker"><BarChart3 size={14} />当前准备度</span><div className="report-score">{report.readinessScore}<small>/100</small></div><p>{report.summary}</p></div>
@@ -500,7 +568,7 @@ export default function Home() {
     {mobileOpen && <button className="scrim" aria-label="关闭菜单" onClick={() => setMobileOpen(false)} />}
     <section className="main-panel"><header className="topbar"><button className="icon-button mobile-menu" aria-label="打开菜单" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><div className="breadcrumb"><span>工作台</span><ChevronRight size={14} /><strong>{activeNav}</strong></div><div className="topbar-actions"><span className="sync-status"><span className="status-dot" />账号已登录</span><button className="avatar-button" aria-label="当前用户">{currentUser.name.slice(0, 1)}</button></div></header><div className="content-wrap">{notice && <div className="notice-banner"><Sparkles size={15} /><span>{notice}</span><button className="icon-button" aria-label="关闭提示" onClick={() => setNotice(null)}><X size={15} /></button></div>}{activeNav === "工作台" && renderDashboard()}{activeNav === "面试训练" && renderTraining()}{activeNav === "能力报告" && renderReport()}{activeNav === "项目设置" && renderSettings()}</div></section>
     {projectModalOpen && <div className="modal-backdrop" role="presentation" onMouseDown={() => setProjectModalOpen(false)}><div className="modal-card" role="dialog" aria-modal="true" aria-labelledby="project-modal-title" onMouseDown={(event) => event.stopPropagation()}><div className="modal-heading"><div><span className="section-kicker"><Github size={14} />公开仓库</span><h2 id="project-modal-title">导入一个 React / Next.js 项目</h2></div><button className="icon-button" aria-label="关闭弹窗" onClick={() => setProjectModalOpen(false)}><X size={18} /></button></div><form onSubmit={handleAnalyze}><label className="answer-label" htmlFor="repo-url">GitHub 仓库地址</label><input id="repo-url" value={repoUrl} onChange={(event) => setRepoUrl(event.target.value)} placeholder="https://github.com/用户名/仓库名" /><label className="answer-label" htmlFor="job-description">目标岗位 JD</label><textarea id="job-description" value={jobDescription} onChange={(event) => setJobDescription(event.target.value)} placeholder="粘贴前端实习岗位描述，帮助 Agent 调整问题重点。" /><div className="modal-foot"><span>只支持公开仓库，读取过程不会修改代码。</span><div className="answer-actions"><button className="ghost-button" type="button" onClick={() => setProjectModalOpen(false)}>取消</button><button className="primary-button" type="submit" disabled={isAnalyzing}>{isAnalyzing ? <LoaderCircle size={15} className="spin" /> : <Github size={15} />}{isAnalyzing ? "分析中" : "分析仓库"}</button></div></div></form></div></div>}
-    {reviewOpen && <div className="modal-backdrop" role="presentation" onMouseDown={() => setReviewOpen(false)}><div className="modal-card review-modal" role="dialog" aria-modal="true" aria-labelledby="review-modal-title" onMouseDown={(event) => event.stopPropagation()}><div className="modal-heading"><div><span className="section-kicker"><BookOpen size={14} />训练复盘</span><h2 id="review-modal-title">{interviewDetail?.projectName ?? "读取面试记录"}</h2></div><div className="review-heading-actions"><button className="ghost-button" type="button" disabled={!interviewDetail} onClick={() => interviewDetail && downloadInterviewReport(interviewDetail)}><Download size={15} />导出 Markdown</button><button className="icon-button" aria-label="关闭复盘" onClick={() => setReviewOpen(false)}><X size={18} /></button></div></div>{isReviewLoading ? <div className="review-loading"><LoaderCircle size={21} className="spin" /><span>正在读取完整复盘</span></div> : interviewDetail && <><div className="review-summary"><div><strong>{interviewDetail.averageScore.toFixed(1)}</strong><span>平均分</span></div><div><strong>{interviewDetail.answers.length}</strong><span>已回答</span></div><div><strong>{interviewDetail.status === "completed" ? "已完成" : "进行中"}</strong><span>{formatSessionTime(interviewDetail.completedAt ?? interviewDetail.startedAt)}</span></div></div><div className="review-list">{interviewDetail.answers.map((item) => <section className="review-item" key={item.questionNumber}><div className="review-question-heading"><span>第 {item.questionNumber} 题 · {item.difficulty}</span><strong>{item.score.toFixed(1)} / 10</strong></div><h3>{item.question}</h3><code>{item.contextPath}</code><div className="review-answer"><span>我的回答</span><p>{item.answer}</p></div><div className="review-feedback"><div><span>做得不错</span><ul>{item.strengths.map((text) => <li key={text}>{text}</li>)}</ul></div><div><span>可以改进</span><ul>{item.improvements.map((text) => <li key={text}>{text}</li>)}</ul></div></div></section>)}</div></>}</div></div>}
+    {reviewOpen && <div className="modal-backdrop" role="presentation" onMouseDown={() => setReviewOpen(false)}><div className="modal-card review-modal" role="dialog" aria-modal="true" aria-labelledby="review-modal-title" onMouseDown={(event) => event.stopPropagation()}><div className="modal-heading"><div><span className="section-kicker"><BookOpen size={14} />训练复盘</span><h2 id="review-modal-title">{interviewDetail?.projectName ?? "读取面试记录"}</h2></div><div className="review-heading-actions"><button className="ghost-button" type="button" disabled={!interviewDetail} onClick={() => interviewDetail && downloadInterviewReport(interviewDetail)}><Download size={15} />导出 Markdown</button><button className="icon-button" aria-label="关闭复盘" onClick={() => setReviewOpen(false)}><X size={18} /></button></div></div>{isReviewLoading ? <div className="review-loading"><LoaderCircle size={21} className="spin" /><span>正在读取完整复盘</span></div> : interviewDetail && <><div className="review-summary"><div><strong>{interviewDetail.scoredQuestions ? interviewDetail.averageScore.toFixed(1) : "-"}</strong><span>可比较模型均分 · {interviewDetail.scoredQuestions}/{interviewDetail.answers.length} 题</span></div><div><strong>{interviewDetail.answers.length}</strong><span>已回答</span></div><div><strong>{interviewDetail.status === "completed" ? "已完成" : "进行中"}</strong><span>{formatSessionTime(interviewDetail.completedAt ?? interviewDetail.startedAt)}</span></div></div><div className="review-list">{interviewDetail.answers.map((item) => <section className="review-item" key={item.questionNumber}><div className="review-question-heading"><span>第 {item.questionNumber} 题 · {item.difficulty} · {item.provider === "deepseek" ? "模型评分" : "规则演示分"}</span><strong>{item.score === null ? "无法判断" : `${item.score.toFixed(1)} / 10`}</strong></div><h3>{item.question}</h3><code>{item.contextPath}</code><RunTimeline runId={item.runId} /><EvidenceTraceDetails trace={item.trace} /><RubricDetails rubric={item.rubric} evidence={item.evidence} /><div className="review-answer"><span>我的回答</span><p>{item.answer}</p></div><div className="review-feedback"><div><span>做得不错</span><ul>{item.strengths.map((text) => <li key={text}>{text}</li>)}</ul></div><div><span>可以改进</span><ul>{item.improvements.map((text) => <li key={text}>{text}</li>)}</ul></div></div></section>)}</div></>}</div></div>}
   </main>;
 }
 
@@ -515,7 +583,7 @@ function SignalPanel({ report, isLoading, onOpenReport }: { report: CapabilityRe
 
 function SessionsPanel({ report, isLoading, onOpenReport, onOpenSession }: { report: CapabilityReport | null; isLoading: boolean; onOpenReport: () => void; onOpenSession: (sessionId: string) => void }) {
   const sessions = report?.recentSessions ?? [];
-  return <section className="sessions-panel panel"><div className="panel-heading"><div><span className="section-kicker"><GitPullRequest size={14} />训练记录</span><h2>最近的面试</h2></div><button className="text-button" onClick={onOpenReport}>查看报告 <ChevronRight size={15} /></button></div><div className="session-table"><div className="table-row table-head"><span>训练主题</span><span>项目</span><span>得分</span><span>更新时间</span><span /></div>{sessions.map((session) => <button className="table-row table-row-button" key={session.id} onClick={() => onOpenSession(session.id)}><div className="session-name"><div className={`session-icon ${session.status === "completed" ? "blue-icon" : "amber-icon"}`}><Code2 size={15} /></div><div><strong>项目深挖面试</strong><span>{session.questionCount} 道回答 · {session.status === "completed" ? "已完成" : "进行中"}</span></div></div><span>{session.projectName}</span><strong className="score-text">{session.questionCount ? session.averageScore.toFixed(1) : "-"}</strong><span>{formatSessionTime(session.completedAt ?? session.startedAt)}</span><ChevronRight size={16} className="muted-icon" /></button>)}{!sessions.length && <div className="session-empty">{isLoading ? "正在读取训练记录…" : "完成一次回答后，训练记录会显示在这里。"}</div>}</div></section>;
+  return <section className="sessions-panel panel"><div className="panel-heading"><div><span className="section-kicker"><GitPullRequest size={14} />训练记录</span><h2>最近的面试</h2></div><button className="text-button" onClick={onOpenReport}>查看报告 <ChevronRight size={15} /></button></div><div className="session-table"><div className="table-row table-head"><span>训练主题</span><span>项目</span><span>得分</span><span>更新时间</span><span /></div>{sessions.map((session) => <button className="table-row table-row-button" key={session.id} onClick={() => onOpenSession(session.id)}><div className="session-name"><div className={`session-icon ${session.status === "completed" ? "blue-icon" : "amber-icon"}`}><Code2 size={15} /></div><div><strong>项目深挖面试</strong><span>{session.questionCount} 道回答 · {session.status === "completed" ? "已完成" : "进行中"}</span></div></div><span>{session.projectName}</span><strong className="score-text">{session.scoredQuestions ? session.averageScore.toFixed(1) : "-"}</strong><span>{formatSessionTime(session.completedAt ?? session.startedAt)}</span><ChevronRight size={16} className="muted-icon" /></button>)}{!sessions.length && <div className="session-empty">{isLoading ? "正在读取训练记录…" : "完成一次回答后，训练记录会显示在这里。"}</div>}</div></section>;
 }
 
 function formatSessionTime(value: string) {

@@ -1,22 +1,24 @@
 # Online Deployment Guide
 
-This guide deploys the frontend, API, and PostgreSQL to Render. It is designed for the public GitHub repository version of RepoCoach.
+For recovery from an expired Render database without a paid upgrade, see [the Neon recovery steps](neon-recovery.md).
 
-## Why use Render for all services?
+The current deployment uses Render for the frontend and API, and Neon for PostgreSQL after the database recovery. Keep the existing Neon `DATABASE_URL` when updating the API; a code upgrade does not require creating a new database. This guide is prepared for the final coordinated release; the local Agent upgrade has not yet been deployed.
 
-Render can run both Next.js and NestJS services and provides a managed PostgreSQL database. The browser calls the Render API over HTTPS, and the API stores application data in Render Postgres.
+## Deployment layout
+
+The browser calls the Render API over HTTPS using REST and SSE. The API stores application data in PostgreSQL through Prisma; the existing project uses Neon.
 
 ```text
 Render Web
   https://your-web-service.onrender.com
           |
-          | HTTPS REST + Cookie
+          | HTTPS REST + SSE + Cookie
           v
 Render API
   https://repocoach-api.onrender.com
           |
           v
-Render PostgreSQL
+Neon PostgreSQL
 ```
 
 ## Before starting
@@ -26,14 +28,13 @@ Render PostgreSQL
 - Keep your `DEEPSEEK_API_KEY` and `GITHUB_TOKEN` private. They belong only in the Render environment-variable UI, never in Git.
 - Deploy the API first. The web service needs its public API URL.
 
-## 1. Create PostgreSQL on Render
+## 1. Keep the existing PostgreSQL connection
 
-1. In Render, choose **New** → **Postgres**.
-2. Choose a database name such as `repocoach-db` and a region close to you.
-3. After creation, open the database page and copy its **Internal Database URL**.
-4. Keep that URL for the API service's `DATABASE_URL`.
+1. Use the direct PostgreSQL connection URL from the existing Neon project, including its SSL parameters.
+2. Keep that connection string in the API service's `DATABASE_URL`, never in a committed file or screenshot.
+3. The API startup command applies migrations to this database before starting the service.
 
-Use the internal URL for the API service. It keeps API-to-database traffic inside Render's private network.
+If choosing a different PostgreSQL provider later, use that provider's supported connection URL. Migrating existing data is separate from deploying application code.
 
 ## 2. Deploy the NestJS API on Render
 
@@ -47,7 +48,7 @@ Use the internal URL for the API service. It keeps API-to-database traffic insid
 
 | Key                 | Value                                                   |
 | ------------------- | ------------------------------------------------------- |
-| `DATABASE_URL`      | Render Postgres **Internal Database URL**               |
+| `DATABASE_URL`      | Existing Neon direct PostgreSQL URL with SSL parameters |
 | `WEB_ORIGIN`        | Temporary placeholder; replace after the web service is deployed |
 | `COOKIE_SECURE`     | `true`                                                  |
 | `COOKIE_SAME_SITE`  | `none`                                                  |
@@ -115,6 +116,40 @@ These settings are required when the web and API use different HTTPS origins. Lo
 
 ## Troubleshooting
 
+### Deploying the durable Rubric upgrade
+
+Apply migration `20261013090000_durable_rubric_scoring` along with all earlier migrations before starting the new API. It adds `evaluation_runs` and makes answer scores nullable. The existing API Docker entry point applies committed migrations automatically.
+
+Also apply `20261013120000_events_and_training_memory` for SSE events, practice observations and memory epochs. Existing runs receive a state snapshot, without invented historical steps. Keep frontend and API on the same revision. The reverse proxy must pass `text/event-stream` without buffering; verify Last-Event-ID reconnect and Cookie authentication in the target environment. This release sends 15-second heartbeats and bounds each connection to 150 seconds. No Render deployment has been performed for this upgrade yet.
+
+Deploy the web and API from the same revision: answer submission now returns a 202 task response, and the new web polls its status and offers stage retries. The worker starts inside NestJS and uses PostgreSQL leases; no separate Redis or worker service is required. Pending stages recover when the API starts or a progress request wakes it. Idle queues do not query continuously.
+
+Tasks record the Rubric, prompt version and configured model alias. This release processes only its supported version; changing them while tasks are incomplete can leave those tasks in a version/configuration failure state. A crash may repeat an external model request before its checkpoint, although the final committed turn remains unique. See [the recovery contract](rubric-and-recovery.md).
+
+### Render shows `Suspended by Render`
+
+Check the affected service's suspension notice and Events first, then check workspace **Billing → Monthly Included Usage**. A suspended service is different from an idle service: refreshing the page or redeploying code does not necessarily restore it.
+
+| Confirmed reason | Recovery action |
+| --- | --- |
+| Free instance hours exhausted | Wait for the next calendar month's reset, or explicitly choose a paid compute plan. The workspace shares 750 free instance hours across its free web services. |
+| Outbound bandwidth exhausted without a payment method | Check the workspace's usage and billing notice; resolve the stated billing limit or wait for the next billing period. |
+| High service-initiated traffic | Follow Render's suspension notice. Render documents moving the affected service to a paid compute plan as the recovery path. |
+| Maintenance redeploy failed | Read the failed deploy logs and fix the build/start error identified there before redeploying. |
+| Reason not displayed | Check Render's notification email or ask Render support to identify the suspension reason. |
+
+After the API resumes, verify `/api/v1/health`, login, and a database-backed operation. A `200` response from the frontend alone does not verify the backend or database.
+
+See [Render's free-instance limits](https://render.com/docs/free) and [maintenance behavior](https://render.com/docs/platform-maintenance).
+
+### Render Postgres shows `Expired`
+
+Free Render Postgres expires 30 days after creation. Render allows a further 14 days to upgrade the existing database, then deletes it and its data. Check the database's expiration date before choosing a recovery method. Redeploying the API cannot restore an expired database.
+
+If the original database is still recoverable, use Render's documented recovery option to retain its data. If it has already been deleted, restore a backup to a replacement database; creating an empty database and running migrations restores the schema only. Update the API's `DATABASE_URL`, run the existing migrations, and redeploy the API after a replacement database is ready.
+
+For a long-lived portfolio deployment, select a database whose retention and backup policy fits the expected demonstration period. See [Render's Postgres free-tier policy](https://render.com/docs/free#free-postgres).
+
 ### Browser shows a login loop or 401 after deployment
 
 - Verify `WEB_ORIGIN` exactly matches the Render web service URL.
@@ -124,8 +159,8 @@ These settings are required when the web and API use different HTTPS origins. Lo
 
 ### API starts but cannot connect to Postgres
 
-- Use Render's **Internal Database URL** for `DATABASE_URL`.
-- Confirm API and database are in the same Render region.
+- For the existing Neon database, keep the direct connection URL and its SSL parameters in `DATABASE_URL`.
+- If using Render Postgres instead, use its Internal Database URL and match the API/database region.
 - Inspect Render logs for the Prisma migration command.
 
 ### Repository analysis is rate limited

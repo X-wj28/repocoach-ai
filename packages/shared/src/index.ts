@@ -11,6 +11,7 @@ export type InterviewQuestion = {
   contextPath?: string;
   dimension: InterviewDimension;
   difficulty: "基础" | "进阶" | "深入";
+  evidence?: { startLine: number; endLine: number; snippet: string };
 };
 
 export type AnswerEvaluation = {

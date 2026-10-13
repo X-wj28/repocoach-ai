@@ -1,18 +1,17 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import {
   InterviewDifficulty,
   InterviewDimension,
   InterviewStatus,
+  Prisma,
 } from "@prisma/client";
-import type { Question } from "../agent/agent.service";
+import type { InterviewEvaluation, Question } from "../agent/interview.types";
+import type { ProjectContext } from "../github/github.service";
 import { PrismaService } from "../database/prisma.service";
-
-type EvaluationRecord = {
-  score: number;
-  strengths: string[];
-  improvements: string[];
-  provider: string;
-};
 
 type InterviewRecord = {
   id: string;
@@ -23,6 +22,8 @@ type InterviewRecord = {
   jobDescription: string;
   totalQuestions: number;
   questions: Question[];
+  projectContext: ProjectContext;
+  practiceFocus?: unknown;
 };
 
 const dimensions = [
@@ -80,14 +81,9 @@ export class ReportStore {
         jobDescription: interview.jobDescription,
         totalQuestions: interview.totalQuestions,
         questions: interview.questions,
+        projectContext: interview.projectContext,
+        ...(interview.practiceFocus ? { practiceFocus: interview.practiceFocus as Prisma.InputJsonValue } : {}),
       },
-    });
-  }
-
-  async updateInterviewState(interviewId: string, currentQuestion: number, questions: Question[]) {
-    await this.prisma.interview.update({
-      where: { id: interviewId },
-      data: { currentQuestion, questions },
     });
   }
 
@@ -100,6 +96,9 @@ export class ReportStore {
         jobDescription: true,
         currentQuestion: true,
         questions: true,
+        practiceFocus: true,
+        projectContext: true,
+        status: true,
       },
     });
   }
@@ -114,6 +113,7 @@ export class ReportStore {
         currentQuestion: true,
         totalQuestions: true,
         questions: true,
+        practiceFocus: true,
       },
     });
     if (!interview || !Array.isArray(interview.questions)) return null;
@@ -125,40 +125,108 @@ export class ReportStore {
       question: question as Question,
       questionNumber: interview.currentQuestion + 1,
       totalQuestions: interview.totalQuestions,
+      practiceFocus: interview.practiceFocus,
     };
   }
 
-  async recordAnswer(input: {
-    interviewId: string;
-    questionNumber: number;
-    question: Question;
-    answer: string;
-    evaluation: EvaluationRecord;
-    completed: boolean;
-  }) {
-    await this.prisma.interviewAnswer.create({
-      data: {
-        interviewId: input.interviewId,
-        questionNumber: input.questionNumber,
-        questionId: input.question.id,
-        questionPrompt: input.question.prompt,
-        contextPath: input.question.contextPath,
-        dimension: dimensionToDatabase[input.question.dimension],
-        difficulty: difficultyToDatabase[input.question.difficulty],
-        answer: input.answer,
-        score: input.evaluation.score,
-        strengths: input.evaluation.strengths,
-        improvements: input.evaluation.improvements,
-        provider: input.evaluation.provider,
-      },
-    });
-
-    if (input.completed) {
-      await this.prisma.interview.update({
-        where: { id: input.interviewId },
-        data: { status: InterviewStatus.COMPLETED, completedAt: new Date() },
+  async recordAnswer(
+    input: {
+      interviewId: string;
+      userId: string;
+      questionNumber: number;
+      question: Question;
+      answer: string;
+      evaluation: InterviewEvaluation;
+      completed: boolean;
+      questions: Question[];
+      projectContext?: ProjectContext;
+    },
+    transaction?: Prisma.TransactionClient,
+  ): Promise<InterviewEvaluation> {
+    const commit = async (transaction: Prisma.TransactionClient) => {
+      const advanced = await transaction.interview.updateMany({
+        where: {
+          id: input.interviewId,
+          userId: input.userId,
+          currentQuestion: input.questionNumber - 1,
+          status: InterviewStatus.IN_PROGRESS,
+        },
+        data: {
+          currentQuestion: input.questionNumber,
+          questions: input.questions,
+          ...(input.projectContext
+            ? { projectContext: input.projectContext }
+            : {}),
+          ...(input.completed
+            ? { status: InterviewStatus.COMPLETED, completedAt: new Date() }
+            : {}),
+        },
       });
-    }
+      if (advanced.count !== 1) {
+        const existing = await transaction.interviewAnswer.findFirst({
+          where: {
+            interviewId: input.interviewId,
+            questionNumber: input.questionNumber,
+            interview: { userId: input.userId },
+          },
+          select: { answer: true, evaluation: true },
+        });
+        const evaluation = this.restoreEvaluation(existing?.evaluation);
+        if (existing?.answer === input.answer && evaluation) return evaluation;
+        throw new ConflictException(
+          "这道题已提交或会话已更新，请刷新训练进度。",
+        );
+      }
+      await transaction.interviewAnswer.create({
+        data: {
+          interviewId: input.interviewId,
+          questionNumber: input.questionNumber,
+          questionId: input.question.id,
+          questionPrompt: input.question.prompt,
+          contextPath: input.question.contextPath,
+          dimension: dimensionToDatabase[input.question.dimension],
+          difficulty: difficultyToDatabase[input.question.difficulty],
+          answer: input.answer,
+          score: input.evaluation.score,
+          strengths: input.evaluation.strengths,
+          improvements: input.evaluation.improvements,
+          provider: input.evaluation.provider,
+          evaluation: input.evaluation,
+        },
+      });
+
+      return input.evaluation;
+    };
+    return transaction ? commit(transaction) : this.prisma.$transaction(commit);
+  }
+
+  async getRecordedAnswer(
+    interviewId: string,
+    userId: string,
+    questionId: string,
+  ) {
+    const record = await this.prisma.interviewAnswer.findFirst({
+      where: { interviewId, questionId, interview: { userId } },
+      select: { answer: true, evaluation: true },
+    });
+    return record
+      ? {
+          answer: record.answer,
+          evaluation: this.restoreEvaluation(record.evaluation),
+        }
+      : null;
+  }
+
+  private restoreEvaluation(value: unknown): InterviewEvaluation | null {
+    if (!value || typeof value !== "object") return null;
+    const evaluation = value as Partial<InterviewEvaluation>;
+    return typeof evaluation.interviewId === "string" &&
+      (typeof evaluation.score === "number" || evaluation.score === null) &&
+      Array.isArray(evaluation.strengths) &&
+      Array.isArray(evaluation.improvements) &&
+      typeof evaluation.completed === "boolean"
+      ? (evaluation as InterviewEvaluation)
+      : null;
   }
 
   async getProjectReport(projectId: string, userId: string) {
@@ -172,13 +240,14 @@ export class ReportStore {
           strengths: true,
           improvements: true,
           contextPath: true,
+          provider: true,
         },
       }),
       this.prisma.interview.findMany({
         where: { projectId, userId },
         orderBy: { startedAt: "desc" },
         take: 6,
-        include: { answers: { select: { score: true } } },
+        include: { answers: { select: { score: true, provider: true } } },
       }),
       this.prisma.interview.count({
         where: { projectId, userId, status: InterviewStatus.COMPLETED },
@@ -189,8 +258,12 @@ export class ReportStore {
       ...answer,
       dimension: dimensionFromDatabase[answer.dimension],
     }));
+    const gradedAnswers = answers.filter(
+      (answer): answer is typeof answer & { score: number } =>
+        answer.provider === "deepseek" && answer.score !== null,
+    );
     const dimensionResults = dimensions.map((dimension) => {
-      const matching = answers.filter(
+      const matching = gradedAnswers.filter(
         (answer) => answer.dimension === dimension.key,
       );
       const score = matching.length
@@ -208,18 +281,18 @@ export class ReportStore {
       };
     });
 
-    const readinessScore = answers.length
+    const readinessScore = gradedAnswers.length
       ? Math.round(
-          (answers.reduce((sum, answer) => sum + answer.score, 0) /
-            answers.length) *
+          (gradedAnswers.reduce((sum, answer) => sum + answer.score, 0) /
+            gradedAnswers.length) *
             10,
         )
       : 0;
     const strengths = this.uniqueFeedback(
-      answers.flatMap((answer) => this.parseList(answer.strengths)),
+      gradedAnswers.flatMap((answer) => this.parseList(answer.strengths)),
     );
     const improvements = this.uniqueFeedback(
-      answers.flatMap((answer) => this.parseList(answer.improvements)),
+      gradedAnswers.flatMap((answer) => this.parseList(answer.improvements)),
     );
     const measured = dimensionResults.filter(
       (dimension) => dimension.answerCount > 0,
@@ -229,20 +302,30 @@ export class ReportStore {
 
     return {
       projectId,
-      hasData: answers.length > 0,
+      hasData: gradedAnswers.length > 0,
       readinessScore,
-      averageScore: answers.length
+      averageScore: gradedAnswers.length
         ? Number((readinessScore / 10).toFixed(1))
         : 0,
       answeredQuestions: answers.length,
+      scoredQuestions: gradedAnswers.length,
+      demoQuestions: answers.filter((answer) => answer.provider !== "deepseek")
+        .length,
+      unjudgedQuestions: answers.filter(
+        (answer) => answer.provider === "deepseek" && answer.score === null,
+      ).length,
       completedInterviews,
       coveredTopics: new Set(answers.map((answer) => answer.contextPath)).size,
-      summary: answers.length
+      summary: gradedAnswers.length
         ? (strongest?.label ?? "项目表达") +
           "表现相对稳定，下一阶段优先强化" +
           (weakest?.label ?? "工程化表达") +
           "。"
-        : "完成一次项目面试后，这里会生成真实能力分析。",
+        : answers.length
+          ? answers.some((answer) => answer.provider === "deepseek")
+            ? "模型评价存在无法判断的维度，未生成可比较总分；请在复盘中查看证据缺口。"
+            : "回答已保存，目前只有规则演示反馈；获得模型评价后生成能力评分。"
+          : "完成一次项目面试后，这里会生成能力分析。",
       dimensions: dimensionResults,
       strengths: strengths.slice(0, 4),
       improvements: improvements.slice(0, 4),
@@ -255,9 +338,13 @@ export class ReportStore {
           ]
       ).slice(0, 3),
       recentSessions: sessions.map((session) => {
-        const average = session.answers.length
-          ? session.answers.reduce((sum, answer) => sum + answer.score, 0) /
-            session.answers.length
+        const graded = session.answers.filter(
+          (answer): answer is typeof answer & { score: number } =>
+            answer.provider === "deepseek" && answer.score !== null,
+        );
+        const average = graded.length
+          ? graded.reduce((sum, answer) => sum + answer.score, 0) /
+            graded.length
           : 0;
         return {
           id: session.id,
@@ -267,6 +354,7 @@ export class ReportStore {
               ? "completed"
               : "in_progress",
           questionCount: session.answers.length,
+          scoredQuestions: graded.length,
           averageScore: Number(average.toFixed(1)),
           startedAt: session.startedAt.toISOString(),
           completedAt: session.completedAt?.toISOString() ?? null,
@@ -278,15 +366,19 @@ export class ReportStore {
   async getInterviewDetail(interviewId: string, userId: string) {
     const interview = await this.prisma.interview.findFirst({
       where: { id: interviewId, userId },
-      include: { answers: { orderBy: { questionNumber: "asc" } } },
+      include: { answers: { orderBy: { questionNumber: "asc" } }, evaluationRuns: { select: { id: true, questionId: true } } },
     });
     if (!interview) throw new NotFoundException("找不到这次面试记录。");
 
-    const averageScore = interview.answers.length
+    const graded = interview.answers.filter(
+      (answer): answer is typeof answer & { score: number } =>
+        answer.provider === "deepseek" && answer.score !== null,
+    );
+    const averageScore = graded.length
       ? Number(
           (
-            interview.answers.reduce((sum, answer) => sum + answer.score, 0) /
-            interview.answers.length
+            graded.reduce((sum, answer) => sum + answer.score, 0) /
+            graded.length
           ).toFixed(1),
         )
       : 0;
@@ -303,9 +395,17 @@ export class ReportStore {
           : "in_progress",
       totalQuestions: interview.totalQuestions,
       averageScore,
+      scoredQuestions: graded.length,
+      demoQuestions: interview.answers.filter(
+        (answer) => answer.provider !== "deepseek",
+      ).length,
+      unjudgedQuestions: interview.answers.filter(
+        (answer) => answer.provider === "deepseek" && answer.score === null,
+      ).length,
       startedAt: interview.startedAt.toISOString(),
       completedAt: interview.completedAt?.toISOString() ?? null,
       answers: interview.answers.map((answer) => ({
+        runId: interview.evaluationRuns?.find(run => run.questionId === answer.questionId)?.id,
         questionNumber: answer.questionNumber,
         question: answer.questionPrompt,
         contextPath: answer.contextPath,
@@ -316,6 +416,10 @@ export class ReportStore {
         strengths: this.parseList(answer.strengths),
         improvements: this.parseList(answer.improvements),
         provider: answer.provider,
+        trace: this.restoreEvaluation(answer.evaluation)?.trace,
+        rubric: this.restoreEvaluation(answer.evaluation)?.rubric,
+        evidence: this.restoreEvaluation(answer.evaluation)?.evidence,
+        scoring: this.restoreEvaluation(answer.evaluation)?.scoring,
         answeredAt: answer.answeredAt.toISOString(),
       })),
     };

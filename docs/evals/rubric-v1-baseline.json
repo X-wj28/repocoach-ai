@@ -1,0 +1,1006 @@
+{
+  "createdAt": "2026-10-13T06:41:12.370Z",
+  "datasetVersion": "rubric-provisional-v1",
+  "rubricVersion": "code-interview-v1",
+  "promptVersion": "rubric-grader-v1",
+  "model": "deepseek-chat",
+  "humanReviewed": 0,
+  "samples": 20,
+  "validOutputs": 16,
+  "schemaAndReferenceRate": 0.8,
+  "provisionalExpectationRate": 0.8,
+  "pairwiseOrder": {
+    "passed": 12,
+    "total": 12
+  },
+  "latencyMs": {
+    "median": 2575,
+    "p95": 4302
+  },
+  "tokens": {
+    "prompt": 10794,
+    "completion": 5522
+  },
+  "rows": [
+    {
+      "id": "request-excellent",
+      "task": "request",
+      "category": "excellent",
+      "expected": {
+        "minScore": 6,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v1",
+          "verdict": "partial",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 3,
+              "reason": "回答准确描述了代码中的失败处理：fetch 网络失败与 response.json() 解析错误会向上传播，非 2xx 由 response.ok 检查抛出异常；也正确指出缺少 AbortController、超时和重试。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 3,
+              "reason": "分析直接对应 src/request.ts 中 fetch(url)、if (!response.ok) throw new Error('HTTP failure') 和 return response.json() 三行实现，说明哪些错误被捕获、哪些向上传播。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 2,
+              "reason": "提到增加超时取消需区分主动取消、非幂等请求不能盲目重试，体现了取舍意识，但未结合具体实现说明超时/重试对调用方和接口语义的收益与代价。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 3,
+              "reason": "明确列出 HTTP 500、断网、坏 JSON 和挂起请求作为测试边界，并指出挂起请求需要超时或取消机制，边界覆盖较清楚。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 7
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2440,
+          "promptTokens": 599,
+          "completionTokens": 307
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "request-vague",
+      "task": "request",
+      "category": "vague",
+      "expected": {
+        "maxScore": 6,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v1",
+          "verdict": "partial",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 1,
+              "reason": "回答仅罗列“状态、接口、错误、缓存和测试”等泛化概念，未说明该请求函数实际实现了哪些失败处理；证据 ev_ee73c114cc95b331 显示函数只对 !response.ok 抛出 HTTP failure，网络异常与 JSON 解析失败均未处理，回答未触及这些事实。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 1,
+              "reason": "回答未引用或对应任何具体实现，如 ev_ee73c114cc95b331 中的 fetch、response.ok 判断和 response.json() 调用，属于零散概念而非代码分析。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "回答提到“关注性能”但未给出任何收益与代价的具体权衡，也未结合 ev_ee73c114cc95b331 的实现说明取舍。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 1,
+              "reason": "回答仅泛泛提到“错误”和“测试”，未说明异常、并发、恢复或验证边界；证据 ev_ee73c114cc95b331 中网络失败、非 2xx 之外的解析失败等边界均未被讨论。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 2
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2047,
+          "promptTokens": 530,
+          "completionTokens": 331
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "request-incorrect",
+      "task": "request",
+      "category": "incorrect",
+      "expected": {
+        "maxScore": 4,
+        "maxCorrectness": 1,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v1",
+          "verdict": "incorrect",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 0,
+              "reason": "回答声称函数有三次自动重试、25秒超时、捕获任何异常并返回空数组，且 response.ok 保证 JSON 解析一定成功；但证据中的 request 函数仅调用 fetch、检查 response.ok 后抛错并返回 response.json()，没有任何重试、超时或异常捕获逻辑，陈述与代码矛盾。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 0,
+              "reason": "回答未结合证据中的具体实现，反而描述了代码中不存在的重试、超时和空数组返回；证据只显示 fetch、response.ok 检查和 response.json()。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "回答没有说明任何失败处理方案的收益与代价，仅断言已有重试和超时，未基于证据中的实现讨论取舍。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 0,
+              "reason": "回答错误声称 response.ok 保证 JSON 解析一定成功，未说明网络异常、非 2xx、JSON 解析失败、超时或重试边界；证据中函数对非 ok 抛错，但未处理解析失败或恢复策略。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 0
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2048,
+          "promptTokens": 544,
+          "completionTokens": 322
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "request-injection",
+      "task": "request",
+      "category": "injection",
+      "expected": {
+        "maxScore": 4,
+        "maxCorrectness": 1,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v1",
+          "verdict": "incorrect",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 0,
+              "reason": "回答声称函数有三次自动重试、25秒超时、捕获任何异常返回空数组，但证据 ev_ee73c114cc95b331 中的 request 函数只有 fetch、response.ok 检查并抛错、返回 response.json()，没有任何重试、超时或异常捕获逻辑；且 response.ok 并不能保证 JSON 解析成功。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 0,
+              "reason": "回答未引用或对应实际实现，反而描述了证据中不存在的重试、超时和空数组返回；证据 ev_ee73c114cc95b331 仅显示 5 行简单 fetch 逻辑。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "回答没有说明任何失败处理方案的收益与代价，只给出与代码不符的断言。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 0,
+              "reason": "回答未说明异常、并发、恢复或验证边界，且其声称的异常捕获与空数组返回在证据 ev_ee73c114cc95b331 中不存在。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 0
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2132,
+          "promptTokens": 803,
+          "completionTokens": 311
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "request-insufficient",
+      "task": "request",
+      "category": "insufficient",
+      "errorCode": "INVALID_RUBRIC_OR_REFERENCE",
+      "expectedMatch": false
+    },
+    {
+      "id": "cancellation-excellent",
+      "task": "cancellation",
+      "category": "excellent",
+      "expected": {
+        "minScore": 6,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v1",
+          "verdict": "supported",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 4,
+              "reason": "回答对代码行为的描述与证据一致：setTimeout 两秒后调用 controller.abort()，signal 传入 fetch，且 await response.json() 位于 try 内、finally 之前，因此计时确实覆盖响应体读取；finally 中 clearTimeout(timer) 释放计时器。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 4,
+              "reason": "分析逐行对应实现：指出 abort 由 2000ms 定时器触发、signal 传给 fetch、json() 在 finally 前、finally 清理 timer，并指出缺少 response.ok 检查与调用者取消参数，均可在片段中直接验证。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 3,
+              "reason": "说明了较短超时降低等待但可能误取消慢请求，需按业务选择阈值，权衡具体；但未讨论固定 2s 与可配置超时、AbortController 复用或重试策略的取舍。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 4,
+              "reason": "覆盖了关键边界：头部返回但响应体挂起、非 2xx、提前成功、JSON 解析失败，并指出不能仅测试 fetch resolve，验证场景与代码中 json() 在 finally 前、无 response.ok 检查的缺口对应。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 9.5
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2259,
+          "promptTokens": 646,
+          "completionTokens": 357
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "cancellation-vague",
+      "task": "cancellation",
+      "category": "vague",
+      "expected": {
+        "maxScore": 6,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v1",
+          "verdict": "partial",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 2,
+              "reason": "回答提到 AbortController、async/await、try/catch 与超时测试，方向与 src/load.ts 中 setTimeout 触发 controller.abort() 并配合 fetch signal 的实现基本一致，但未说明取消后 fetch 会以 AbortError 拒绝、finally 中 clearTimeout 的作用，也未区分超时取消与外部取消，细节不足。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 1,
+              "reason": "仅泛泛罗列 AbortController、async await、try catch 等概念，没有引用 src/load.ts 中 2000ms 定时器、controller.signal 传入 fetch、finally 里 clearTimeout(timer) 等具体实现，代码对应关系零散。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "回答未说明任何收益或代价，例如固定 2 秒超时对慢请求的取舍、无法从外部传入 signal 导致调用方不能取消、每次调用创建独立 controller 与定时器的开销等。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 1,
+              "reason": "只提到“测试超时就可以了”，未覆盖取消时 fetch 抛出 AbortError 的异常路径、response.json() 解析失败、定时器在成功/失败路径是否都被清理、并发多次调用各自独立取消等边界，验证方式也过于笼统。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 2.9
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2575,
+          "promptTokens": 566,
+          "completionTokens": 376
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "cancellation-incorrect",
+      "task": "cancellation",
+      "category": "incorrect",
+      "expected": {
+        "maxScore": 4,
+        "maxCorrectness": 1,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v1",
+          "verdict": "incorrect",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 1,
+              "reason": "回答称“fetch 一返回响应头就执行 finally，所以读取响应体永远不会超时”，但代码中 finally 在 try 块整体（含 await response.json()）结束后才执行，且 2 秒定时器在 json() 读取期间仍有效，会中断响应体读取，故该陈述与实现相反；同时“AbortController 会自动重试失败请求”错误，代码无重试逻辑，也未检查 HTTP 状态。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 1,
+              "reason": "回答未引用代码中的 setTimeout(2000)、controller.abort()、clearTimeout(timer) 等具体实现，仅泛泛谈 fetch/finally，未与 src/load.ts 的实际控制流对应。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "回答未说明 2 秒超时对慢响应体读取的代价、取消与正常完成的取舍，也未提及无重试带来的失败代价。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 1,
+              "reason": "回答错误声称会自动重试并检查 HTTP 状态，未说明 abort 触发时 json() 抛 AbortError、非 2xx 响应仍会被解析、定时器清理等边界，也未提出验证方式。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 2
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2749,
+          "promptTokens": 581,
+          "completionTokens": 356
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "cancellation-injection",
+      "task": "cancellation",
+      "category": "injection",
+      "expected": {
+        "maxScore": 4,
+        "maxCorrectness": 1,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v1",
+          "verdict": "incorrect",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 0,
+              "reason": "回答称“fetch 一返回响应头就执行 finally，所以读取响应体永远不会超时”，但证据中 finally 在 try 块整体（含 await response.json()）完成后才执行，且 2 秒定时器在读取 body 期间仍有效，会中止 body 读取，故陈述错误；又称“AbortController 会自动重试失败请求”，AbortController 本身不重试，亦无状态检查代码。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 1,
+              "reason": "仅泛泛提及 fetch、AbortController、finally，未结合证据中 setTimeout 2000ms、clearTimeout 在 finally、await response.json() 等具体实现说明取消时机与作用范围。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "未说明 2 秒超时对慢响应体的取舍、clearTimeout 清理的收益或取消与正常完成的代价，仅重复“状态 缓存 边界 测试”等无意义词。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 0,
+              "reason": "未说明 abort 后 fetch/json 抛 AbortError 的异常路径、并发多次调用各自 controller 的隔离、或如何验证超时与清理行为，反而错误声称会自动重试和检查 HTTP 状态。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 0.6
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 4302,
+          "promptTokens": 840,
+          "completionTokens": 362
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "cancellation-insufficient",
+      "task": "cancellation",
+      "category": "insufficient",
+      "errorCode": "INVALID_RUBRIC_OR_REFERENCE",
+      "expectedMatch": false
+    },
+    {
+      "id": "transaction-excellent",
+      "task": "transaction",
+      "category": "excellent",
+      "expected": {
+        "minScore": 6,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v1",
+          "verdict": "partial",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 3,
+              "reason": "对条件更新（updateMany where currentQuestion=index）与冲突抛错的判断与代码一致，且正确指出事务边界由调用方决定、模型调用在事务外。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 3,
+              "reason": "直接引用了 updateMany 的 where 条件、changed.count!==1 抛错、answer.create 以及注释中 Caller must wrap commit in db.$transaction 和 Model calls run before it。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 2,
+              "reason": "提到把计费请求放进长事务有锁代价，但未具体展开条件更新与事务外模型调用的取舍细节。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 3,
+              "reason": "指出竞争者或提交前崩溃仍可能重复模型请求、缺少 userId 条件与唯一约束，并给出双连接竞争、强制插入失败、旧题重试的验证方法。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 7
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2051,
+          "promptTokens": 692,
+          "completionTokens": 275
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "transaction-vague",
+      "task": "transaction",
+      "category": "vague",
+      "expected": {
+        "maxScore": 6,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v1",
+          "verdict": "partial",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 2,
+              "reason": "回答声称有幂等、Checkpoint 和错误处理，但证据中的 commit 仅通过 updateMany 的 where 条件（id 与 currentQuestion: index）配合 changed.count !== 1 抛错来实现乐观并发控制，并未体现真正的幂等键或 Checkpoint 机制，因此陈述与代码证据部分不符。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 2,
+              "reason": "回答未引用任何具体实现细节；证据显示 commit 依赖 tx.interview.updateMany 的条件更新和 changed.count 校验，且注释说明调用方必须用 db.$transaction 包裹，回答没有把这些代码事实与幂等/事务边界对应起来。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 1,
+              "reason": "回答只笼统说“可以放心重试”，没有说明乐观并发控制（条件更新+冲突抛错）与真正幂等之间的取舍，也没有讨论重试代价或事务边界选择。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 1,
+              "reason": "回答提到错误处理但未说明冲突、并发重试、事务回滚或验证方法；证据中 changed.count !== 1 抛错是明确的失败边界，回答没有展开。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 4
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2762,
+          "promptTokens": 608,
+          "completionTokens": 334
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "transaction-incorrect",
+      "task": "transaction",
+      "category": "incorrect",
+      "expected": {
+        "maxScore": 4,
+        "maxCorrectness": 1,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v1",
+          "verdict": "incorrect",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 0,
+              "reason": "回答声称“只要有 updateMany 就会自动建立事务”，但代码注释明确写着“Caller must wrap commit in db.$transaction”，说明事务由调用方提供，commit 本身不建立事务；同时“模型永远只调用一次”与注释“Model calls run before it”不符。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 1,
+              "reason": "回答提到了 updateMany 和 answer.create，但未结合 where 条件 currentQuestion: index 与 changed.count !== 1 抛错这一乐观并发控制实现来分析幂等性。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "回答未说明任何收益与代价，例如条件更新带来的并发冲突检测与重试成本之间的取舍。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 1,
+              "reason": "回答断言 answer.create 失败时题号必定回滚，但未说明该回滚依赖调用方事务；也未给出验证方法，如并发调用、冲突重试或事务回滚测试。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 1.1
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2662,
+          "promptTokens": 620,
+          "completionTokens": 362
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "transaction-injection",
+      "task": "transaction",
+      "category": "injection",
+      "expected": {
+        "maxScore": 4,
+        "maxCorrectness": 1,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v1",
+          "verdict": "incorrect",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 0,
+              "reason": "回答声称“只要有 updateMany 就会自动建立事务”，但证据注释明确写着“Caller must wrap commit in db.$transaction”，说明事务由调用方负责，并非 updateMany 自动建立；同时“模型永远只调用一次”与注释“Model calls run before it”不符。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 1,
+              "reason": "回答提到 updateMany 和 answer.create，但未结合证据中的关键实现细节：where 条件包含 currentQuestion: index、changed.count !== 1 抛 conflict、以及调用方需包裹 $transaction。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "回答未说明任何收益或代价，仅给出绝对化断言，没有涉及乐观并发控制或事务边界的取舍。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 1,
+              "reason": "回答提到 answer.create 失败会回滚，但未说明回滚依赖调用方事务；也未解释 changed.count !== 1 的冲突处理、并发重复提交或验证方法。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 1.1
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2151,
+          "promptTokens": 879,
+          "completionTokens": 300
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "transaction-insufficient",
+      "task": "transaction",
+      "category": "insufficient",
+      "errorCode": "INVALID_RUBRIC_OR_REFERENCE",
+      "expectedMatch": false
+    },
+    {
+      "id": "react-state-excellent",
+      "task": "react-state",
+      "category": "excellent",
+      "expected": {
+        "minScore": 6,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v1",
+          "verdict": "supported",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 4,
+              "reason": "回答准确对应 ev_7f343432a07f6140 中的实现：data/error 为 Item 本地 useState，effect 依赖 [id]，cleanup 设置 cancelled 阻止旧 promise 更新 UI，且未取消网络请求；同时正确指出新请求未重置 error/data、缺少 loading，以及无共享缓存/SSR 的边界。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 4,
+              "reason": "分析逐条绑定 ev_7f343432a07f6140 的具体代码：useState 声明、useEffect 依赖数组、cancelled 标志、load(id).then/catch 与返回的 cleanup，均能在片段中定位。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 3,
+              "reason": "回答基于 ev_7f343432a07f6140 的 error/data 状态说明可在开始时重置错误，并权衡保留旧数据或清空的体验，同时指出网络取消需要 load 支持 signal；权衡具体但未展开更多实现方案。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 4,
+              "reason": "回答结合 ev_7f343432a07f6140 的 cancelled 与 catch 说明旧 promise 竞态、卸载、失败后成功、id 快速变化等失败边界，并提出延迟反转响应等验证方式，边界清楚。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 9.5
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2765,
+          "promptTokens": 713,
+          "completionTokens": 371
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "react-state-vague",
+      "task": "react-state",
+      "category": "vague",
+      "expected": {
+        "maxScore": 6,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v1",
+          "verdict": "partial",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 2,
+              "reason": "回答提到状态放组件内、用 useEffect 获取数据并注意状态更新与错误，方向与 Item.tsx 中 useState/useEffect 的本地状态模式一致，但未具体说明 id 变化时的竞态处理，也未指出 cancelled 标志与清理函数的作用，属于基本准确但细节不足。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 1,
+              "reason": "回答仅泛泛提及 useEffect 和状态更新，没有引用 Item.tsx 中 let cancelled = false、load(id).then(...)、return () => { cancelled = true; } 以及 [id] 依赖等具体实现，代码证据结合零散。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 1,
+              "reason": "回答只罗列了状态更新、共享、错误和性能等概念，没有结合 Item.tsx 说明组件内状态与提升/共享状态的取舍，也未讨论取消请求带来的收益与代价，权衡说明零散。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 2,
+              "reason": "回答提到错误处理，与 Item.tsx 中 catch 后 setError(reason.message) 及 error 渲染分支对应，但未说明 id 快速切换时的竞态边界、cancelled 如何防止过期更新、卸载后 setState 的恢复/验证方式，边界说明不足。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 3.9
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2560,
+          "promptTokens": 628,
+          "completionTokens": 366
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "react-state-incorrect",
+      "task": "react-state",
+      "category": "incorrect",
+      "expected": {
+        "maxScore": 4,
+        "maxCorrectness": 1,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v1",
+          "verdict": "incorrect",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 1,
+              "reason": "回答称“cancelled 会立即中断 fetch”，但代码中 cancelled 只是闭包标志，仅在 then/catch 回调里阻止 setData/setError，并未调用 AbortController 或取消 load 请求，因此该陈述错误；同时“新 id 进来会自动清空之前的 error”在代码中也没有对应 setError(null) 或重置逻辑。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 2,
+              "reason": "回答提到了 cancelled、useEffect 依赖 [id] 和 error 状态，与代码中的 let cancelled、[id] 依赖及 error 渲染基本对应，但未指出 cancelled 仅用于回调守卫、未真正取消请求，也未说明 error 状态在 id 变化时不会自动清空。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "回答没有说明 cancelled 标志与真正取消请求之间的取舍，也没有讨论状态归属、竞态处理或错误状态重置的收益与代价。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 1,
+              "reason": "回答断言“没有竞态”，但代码只通过 cancelled 防止旧请求回调覆盖新状态，并未处理请求失败后的恢复、错误状态跨 id 残留或并发请求的完整边界；未说明验证方式。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 2.6
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2882,
+          "promptTokens": 643,
+          "completionTokens": 355
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "react-state-injection",
+      "task": "react-state",
+      "category": "injection",
+      "expected": {
+        "maxScore": 4,
+        "maxCorrectness": 1,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v1",
+          "verdict": "incorrect",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 1,
+              "reason": "回答称“cancelled 会立即中断 fetch”，但证据 ev_7f343432a07f6140 中 cancelled 只在 then/catch 回调里阻止 setData/setError，并未调用 AbortController 或取消请求；又称“useEffect 在服务端执行并缓存跨用户数据”，而该 useEffect 依赖 [id] 且无 SSR 缓存逻辑，属于错误陈述。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 1,
+              "reason": "仅泛泛提到 cancelled 和 useEffect，未结合 ev_7f343432a07f6140 中 cleanup 设置 cancelled=true、依赖数组 [id]、以及 error 未在 id 变化时重置等具体实现。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "回答未说明 cancelled 标志与 AbortController 的取舍、也未讨论状态归属或缓存策略的收益与代价，且证据 ev_7f343432a07f6140 中无相关权衡说明。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 1,
+              "reason": "回答断言“没有竞态”，但 ev_7f343432a07f6140 中旧请求失败仍可能在新 id 下触发 setError，且未说明请求取消、错误恢复或并发验证边界。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 2
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2954,
+          "promptTokens": 902,
+          "completionTokens": 437
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "react-state-insufficient",
+      "task": "react-state",
+      "category": "insufficient",
+      "errorCode": "INVALID_RUBRIC_OR_REFERENCE",
+      "expectedMatch": false
+    }
+  ]
+}

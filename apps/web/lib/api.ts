@@ -1,3 +1,5 @@
+import { requestJson } from "./http";
+
 export type Project = {
   id: string;
   name: string;
@@ -13,6 +15,8 @@ export type Project = {
   readmePreview?: string;
   keyFiles?: Array<{ path: string; size: number; language: string }>;
   treeTruncated?: boolean;
+  commitSha?: string;
+  indexedFiles?: number;
 };
 
 export type User = {
@@ -28,12 +32,26 @@ export type Question = {
   contextPath: string;
   dimension: "react" | "nextjs" | "engineering" | "performance";
   difficulty: "基础" | "进阶" | "深入";
+  evidence?: { startLine: number; endLine: number; snippet: string };
+};
+
+export type EvidenceTrace = {
+  runId: string;
+  commitSha?: string;
+  snapshot: "pinned" | "legacy";
+  outcome: "completed" | "provider-error" | "budget-exhausted" | "invalid-output";
+  durationMs: number;
+  modelCalls: number;
+  promptTokens: number;
+  completionTokens: number;
+  filesRead: string[];
+  tools: Array<{ name: string; status: string; durationMs: number; outputCharacters: number; path?: string; query?: string }>;
 };
 
 export type Evaluation = {
   interviewId: string;
   projectId?: string;
-  score: number;
+  score: number | null;
   strengths: string[];
   improvements: string[];
   nextQuestion?: Question;
@@ -42,7 +60,21 @@ export type Evaluation = {
   completed?: boolean;
   provider: string;
   note: string;
+  nextQuestionSource?: "model" | "context-planner" | "none";
+  trace?: EvidenceTrace;
+  rubric?: { version: string; promptVersion: string; verdict: string; judgedCriteria: number; criteria: Array<{ key: "correctness" | "code_evidence" | "tradeoffs" | "failure_boundaries"; score: number | null; reason: string; evidenceIds: string[] }> };
+  evidence?: { items: Array<{ id: string; path: string; startLine: number; endLine: number; snippet: string }>; coverage: string; commitSha?: string };
 };
+
+export type EvaluationRun = { id: string; interviewId: string; questionId: string; answer: string; phase: "evidence" | "scoring" | "completed"; status: "pending" | "running" | "failed" | "completed";
+  retryable: boolean; attempts: { evidence: number; scoring: number }; failureCode: string | null; evaluation: Evaluation | null; lastEventSeq: number };
+
+export type RunEvent = { sequence: number; type: string; payload: Record<string, string | number | boolean | null | string[]>; createdAt: string };
+export type EventPage = { run: EvaluationRun; events: RunEvent[]; next: number; hasMore: boolean };
+export type MemoryObservation = { id: string; criterion: string; dimension: string; label: string; score: number; reason: string; createdAt: string;
+  source: { runId: string; interviewId: string; questionNumber: number; commitSha: string | null; evidenceIds: string[]; paths: string[] } };
+export type TrainingMemory = { projectId: string; window: number; observations: MemoryObservation[]; focus: MemoryObservation[]; practiced: number; note: string };
+export type PracticeFocus = { criterion: string; label: string; dimension: string; sourceInterviewId: string; sourceQuestionNumber: number; contextPath: string };
 
 export type CapabilityReport = {
   projectId: string;
@@ -50,6 +82,9 @@ export type CapabilityReport = {
   readinessScore: number;
   averageScore: number;
   answeredQuestions: number;
+  scoredQuestions: number;
+  demoQuestions: number;
+  unjudgedQuestions?: number;
   completedInterviews: number;
   coveredTopics: number;
   summary: string;
@@ -69,6 +104,7 @@ export type CapabilityReport = {
     projectName: string;
     status: "in_progress" | "completed";
     questionCount: number;
+    scoredQuestions: number;
     averageScore: number;
     startedAt: string;
     completedAt: string | null;
@@ -85,19 +121,26 @@ export type InterviewDetail = {
   totalQuestions: number;
   averageScore: number;
   startedAt: string;
+  scoredQuestions: number;
+  demoQuestions: number;
+  unjudgedQuestions?: number;
   completedAt: string | null;
   answers: Array<{
+    runId?: string;
     questionNumber: number;
     question: string;
     contextPath: string;
     dimension: Question["dimension"];
     difficulty: Question["difficulty"];
     answer: string;
-    score: number;
+    score: number | null;
     strengths: string[];
     improvements: string[];
     provider: string;
     answeredAt: string;
+    trace?: EvidenceTrace;
+    rubric?: Evaluation["rubric"];
+    evidence?: Evaluation["evidence"];
   }>;
 };
 
@@ -114,45 +157,8 @@ function resolveApiBase() {
 
 const API_BASE = resolveApiBase();
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 25000);
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE}${path}`, {
-      ...init,
-      signal: controller.signal,
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(init?.headers ?? {})
-      }
-    });
-  } catch (reason) {
-    if (reason instanceof Error && reason.name === "AbortError") {
-      throw new Error("后端服务响应超时。Render 免费实例可能正在唤醒，请等待 30 秒后重试。");
-    }
-    if (reason instanceof TypeError) {
-      throw new Error("无法连接后端服务。请确认 API 已部署并处于 Live 状态；如果服务刚休眠，请稍后重试。");
-    }
-    throw reason;
-  } finally {
-    window.clearTimeout(timeout);
-  }
-
-  if (!response.ok) {
-    const body = await response.text();
-    let message = body;
-    try {
-      const parsed = JSON.parse(body) as { message?: string | string[] };
-      message = Array.isArray(parsed.message) ? parsed.message.join("；") : parsed.message ?? body;
-    } catch {
-      // Keep the response body when the server did not return JSON.
-    }
-    throw new Error(message || `API request failed with ${response.status}`);
-  }
-
-  return response.json() as Promise<T>;
+async function request<T>(path: string, init?: RequestInit, timeoutMs = 25000): Promise<T> {
+  return requestJson<T>(`${API_BASE}${path}`, init, timeoutMs);
 }
 
 export function register(input: { email: string; name: string; password: string }) {
@@ -187,21 +193,66 @@ export function analyzeProject(repoUrl: string, jobDescription: string) {
 }
 
 export function startInterview(projectId: string, jobDescription: string, projectUrl: string) {
-  return request<{ interviewId: string; projectId: string; question: Question; questionNumber: number; totalQuestions: number; provider: string; mode: string }>("/interviews/start", {
+  return request<{ interviewId: string; projectId: string; question: Question; questionNumber: number; totalQuestions: number; provider: string; mode: string; practiceFocus?: PracticeFocus[] }>("/interviews/start", {
     method: "POST",
     body: JSON.stringify({ projectId, jobDescription, projectUrl })
   });
 }
 
 export function getActiveInterview(projectId: string) {
-  return request<{ interviewId: string; projectId: string; question: Question; questionNumber: number; totalQuestions: number } | null>(`/interviews/active?projectId=${encodeURIComponent(projectId)}`);
+  return request<{ interviewId: string; projectId: string; question: Question; questionNumber: number; totalQuestions: number; pendingRun?: EvaluationRun | null; practiceFocus?: PracticeFocus[] } | null>(`/interviews/active?projectId=${encodeURIComponent(projectId)}`);
 }
 
-export function submitInterviewAnswer(interviewId: string, answer: string) {
-  return request<Evaluation>(`/interviews/${interviewId}/answer`, {
+export function submitInterviewAnswer(interviewId: string, answer: string, questionId: string) {
+  return request<EvaluationRun>(`/interviews/${interviewId}/answer`, {
     method: "POST",
-    body: JSON.stringify({ answer })
-  });
+    body: JSON.stringify({ answer, questionId })
+  }, 65000);
+}
+
+export function getEvaluationRun(id: string) { return request<EvaluationRun>(`/interviews/evaluations/${encodeURIComponent(id)}`); }
+export function retryEvaluationRun(id: string) { return request<EvaluationRun>(`/interviews/evaluations/${encodeURIComponent(id)}/retry`, { method: "POST" }); }
+export function getRunEvents(id: string, after = 0) { return request<EventPage>(`/interviews/evaluations/${encodeURIComponent(id)}/events?after=${after}`); }
+export function getTrainingMemory(projectId: string) { return request<TrainingMemory>(`/training-memory?projectId=${encodeURIComponent(projectId)}`); }
+export function clearTrainingMemory() { return request<{ cleared: number; historyRetained: true }>("/training-memory/clear", { method: "POST" }); }
+
+export function watchEvaluationRun(id: string, handlers: {
+  onState: (run: EvaluationRun) => void; onEvent: (event: RunEvent) => void;
+  onConnection: (state: "connecting" | "live" | "reconnecting" | "fallback" | "finished") => void;
+}) {
+  let stopped = false;
+  let cursor = 0;
+  let source: EventSource | undefined;
+  let fallback: ReturnType<typeof setInterval> | undefined;
+  let checking = false;
+  const finish = () => { stopped = true; source?.close(); if (fallback) clearInterval(fallback); };
+  const state = (run: EvaluationRun) => {
+    if (stopped) return;
+    handlers.onState(run);
+    if (run.status === "completed" || run.status === "failed") { handlers.onConnection("finished"); finish(); }
+  };
+  const poll = async () => {
+    if (stopped || checking) return;
+    checking = true;
+    try { state(await getEvaluationRun(id)); } catch { /* keep the immutable answer visible */ }
+    finally { checking = false; }
+  };
+  handlers.onConnection("connecting");
+  if (typeof EventSource !== "undefined") {
+    source = new EventSource(`${API_BASE}/interviews/evaluations/${encodeURIComponent(id)}/stream`, { withCredentials: true });
+    source.onopen = () => { if (!stopped) { handlers.onConnection("live"); if (fallback) { clearInterval(fallback); fallback = undefined; } } };
+    source.addEventListener("evaluation-event", event => {
+      if (stopped) return;
+      try { const item = JSON.parse((event as MessageEvent).data) as RunEvent;
+        if (Number.isInteger(item.sequence) && item.sequence > cursor) { cursor = item.sequence; handlers.onEvent(item); }
+      } catch { /* retry using the provider's last event ID */ }
+    });
+    source.addEventListener("run-state", event => { try { state(JSON.parse((event as MessageEvent).data)); } catch { /* recovery poll remains available */ } });
+    source.onerror = () => { if (!stopped) { handlers.onConnection("reconnecting"); if (!fallback) fallback = setInterval(poll, 5000); void poll(); } };
+  } else {
+    handlers.onConnection("fallback"); fallback = setInterval(poll, 5000); void poll();
+  }
+  return finish;
 }
 
 export function getProjectReport(projectId: string) {

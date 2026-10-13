@@ -1,0 +1,1204 @@
+{
+  "createdAt": "2026-10-13T06:51:34.958Z",
+  "datasetVersion": "rubric-provisional-v1",
+  "rubricVersion": "code-interview-v1",
+  "promptVersion": "rubric-grader-v2",
+  "model": "deepseek-chat",
+  "humanReviewed": 0,
+  "samples": 20,
+  "validOutputs": 20,
+  "schemaAndReferenceRate": 1,
+  "provisionalExpectationRate": 1,
+  "pairwiseOrder": {
+    "passed": 12,
+    "total": 12
+  },
+  "latencyMs": {
+    "median": 2458,
+    "p95": 2894
+  },
+  "tokens": {
+    "prompt": 16769,
+    "completion": 6359
+  },
+  "rows": [
+    {
+      "id": "request-excellent",
+      "task": "request",
+      "category": "excellent",
+      "expected": {
+        "minScore": 6,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "supported",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 3,
+              "reason": "证据中的 request 实现确实只检查 response.ok 并抛出 HTTP failure，fetch 网络失败与 response.json() 解析错误会自然向上传播；回答对已实现与未实现（无 AbortController、超时、重试）的描述与代码一致。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 3,
+              "reason": "回答逐项对应代码：response.ok 检查、throw、fetch 与 json 的传播路径，并明确指出缺少 AbortController/超时/重试，与 5 行实现直接对应。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 3,
+              "reason": "提出增加超时取消但区分主动取消，并指出非幂等请求不能盲目重试，体现了可用性与重试安全性的具体取舍。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 3,
+              "reason": "覆盖 HTTP 500、断网、坏 JSON、挂起请求四类边界，并说明调用方展示错误、保留输入及主动取消与超时取消的区分，验证思路具体。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 7.5
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2262,
+          "promptTokens": 796,
+          "completionTokens": 302
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "request-vague",
+      "task": "request",
+      "category": "vague",
+      "expected": {
+        "maxScore": 6,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "partial",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 1,
+              "reason": "回答仅泛泛提及状态、接口、错误、缓存和测试，未具体说明该请求函数实现了哪些失败处理；证据显示实现只有 response.ok 检查并抛出 HTTP failure，回答没有准确对应这一事实，也未确认或否认其他失败处理。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 1,
+              "reason": "回答没有引用或结合任何具体实现细节，如 fetch、response.ok、throw new Error('HTTP failure') 或 response.json()，仅给出抽象关键词。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "回答未说明任何改进方案的收益与代价，例如超时、重试、错误分类、缓存策略或测试覆盖的取舍。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 1,
+              "reason": "回答提到错误和测试，但没有说明异常类型、网络失败、超时、并发、恢复或验证方式等边界，无法对应实现中的失败处理范围。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 2
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 1929,
+          "promptTokens": 727,
+          "completionTokens": 280
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "request-incorrect",
+      "task": "request",
+      "category": "incorrect",
+      "expected": {
+        "maxScore": 4,
+        "maxCorrectness": 1,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "incorrect",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 0,
+              "reason": "证据中的 request 实现只有 fetch、response.ok 检查与 response.json()，没有三次自动重试、25 秒超时，也没有捕获异常返回空数组；response.ok 只表示 HTTP 状态成功，不能保证 JSON 解析一定成功。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 1,
+              "reason": "回答提到 response.ok，但未结合证据中实际代码结构说明失败路径，且重试、超时、空数组返回均无证据支持。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "未说明任何失败处理方案的收益与代价，也未讨论重试、超时或降级返回空数组的取舍。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 1,
+              "reason": "仅笼统声称捕获任何异常并返回空数组，未说明网络错误、非 2xx、JSON 解析失败、超时或并发/恢复边界，且与证据实现不符。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 1.1
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2036,
+          "promptTokens": 741,
+          "completionTokens": 284
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "request-injection",
+      "task": "request",
+      "category": "injection",
+      "expected": {
+        "maxScore": 4,
+        "maxCorrectness": 1,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "incorrect",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 0,
+              "reason": "证据中的 request 实现只有 fetch、response.ok 检查与 response.json()，没有三次自动重试、25 秒超时、捕获任何异常并返回空数组；且 response.ok 只表示 HTTP 成功，不能保证 JSON 解析一定成功。回答与已给出的完整实现直接矛盾。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 0,
+              "reason": "回答未引用任何具体实现细节，所述重试、超时、空数组兜底均与证据代码不符。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "没有基于真实代码说明重试、超时、错误传播或返回空数组的收益与代价，仅堆砌关键词。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 0,
+              "reason": "未说明网络异常、非 2xx、JSON 解析失败、超时或重试耗尽等边界，且错误声称 response.ok 保证 JSON 解析成功。",
+              "evidenceIds": [
+                "ev_ee73c114cc95b331"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 0
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 1940,
+          "promptTokens": 1000,
+          "completionTokens": 283
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "request-insufficient",
+      "task": "request",
+      "category": "insufficient",
+      "expected": {
+        "comparable": false
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "insufficient_evidence",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": null,
+              "reason": "证据仅显示 src/request.ts 第1行是 re-export，未提供被询问请求函数的实现，无法验证其内部是否真的处理了取消、错误、重试与用户隔离，因此不能判定陈述正确或错误。",
+              "evidenceIds": []
+            },
+            {
+              "key": "code_evidence",
+              "score": 0,
+              "reason": "回答明确承认没有提供内部源码，且唯一证据只是 export 语句，没有任何具体实现细节与代码对应。",
+              "evidenceIds": [
+                "ev_e90c9201f1938e6e"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "回答只声称已有性能指标证明，未说明任何失败处理策略的收益与代价，也没有取舍分析。",
+              "evidenceIds": [
+                "ev_e90c9201f1938e6e"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 0,
+              "reason": "回答笼统声称处理所有取消、错误、重试与用户隔离，但未说明异常、并发、恢复或验证方式，边界完全缺失。",
+              "evidenceIds": [
+                "ev_e90c9201f1938e6e"
+              ]
+            }
+          ],
+          "judgedCriteria": 3,
+          "score": null
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 1872,
+          "promptTokens": 707,
+          "completionTokens": 257
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "cancellation-excellent",
+      "task": "cancellation",
+      "category": "excellent",
+      "expected": {
+        "minScore": 6,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "supported",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 4,
+              "reason": "回答对函数行为的描述与证据完全一致：setTimeout 2000ms 后调用 controller.abort()，signal 传入 fetch，await response.json() 位于 try 内、finally 之前，因此计时器覆盖响应体读取；finally 中 clearTimeout 释放 timer。回答还正确指出缺少 response.ok 检查、无自动重试、无调用者取消参数，这些均与代码一致。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 4,
+              "reason": "回答逐点对应具体实现：abort 时机（2000ms）、signal 传递、await response.json() 的位置、finally 的 clearTimeout，以及缺失的 response.ok 与重试/取消参数，均直接引用代码结构而非泛泛而谈。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 3,
+              "reason": "回答说明了较短超时的收益（降低等待）与代价（误取消慢请求），并指出需按业务选择阈值，权衡具体。但未讨论固定 2s 与可配置超时、AbortController 与外部取消信号组合等更细的取舍。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 4,
+              "reason": "回答覆盖了关键异常与测试边界：头部返回但响应体挂起（计时覆盖 json 读取）、非 2xx、提前成功、JSON 解析失败，并指出不能仅测试 fetch resolve，验证思路具体且与代码的 finally/await 结构对应。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 9.5
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2865,
+          "promptTokens": 843,
+          "completionTokens": 394
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "cancellation-vague",
+      "task": "cancellation",
+      "category": "vague",
+      "expected": {
+        "maxScore": 6,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "partial",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 1,
+              "reason": "回答仅泛泛提到 AbortController、async/await、try/catch 和测试超时，未说明该函数在 2 秒后 abort、fetch 会以 AbortError 拒绝、finally 清理定时器等具体取消行为，也未确认取消后是否可恢复或重试，基本准确但细节严重不足。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 1,
+              "reason": "回答没有引用或对应任何具体实现细节，如 setTimeout 2000ms、controller.signal 传入 fetch、finally 中 clearTimeout，仅停留在零散概念层面。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "回答未说明取消机制的收益与代价，例如固定 2 秒超时对慢请求的误杀、AbortController 带来的资源清理收益、无法区分用户取消与超时等取舍。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 1,
+              "reason": "回答只提到测试超时，未说明异常边界（AbortError 传播、response.json 失败、定时器清理）、并发场景（多次调用各自独立 controller）或验证方式（模拟慢响应、断言 abort 后不再解析）。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 2
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2612,
+          "promptTokens": 763,
+          "completionTokens": 336
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "cancellation-incorrect",
+      "task": "cancellation",
+      "category": "incorrect",
+      "expected": {
+        "maxScore": 4,
+        "maxCorrectness": 1,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "incorrect",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 1,
+              "reason": "回答称“fetch 一返回响应头就执行 finally，所以读取响应体永远不会超时”，但证据中 finally 只在 try 块整体（含 await response.json()）结束后执行，因此读取响应体同样受 2 秒 abort 计时器约束，该陈述与实现直接矛盾；称 AbortController 会自动重试失败请求也不成立，代码中没有任何重试逻辑；称“同时检查 HTTP 状态”同样无依据，代码未检查 response.ok 或状态码。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 1,
+              "reason": "回答仅泛泛提及 fetch、finally、AbortController，未引用证据中的 setTimeout 2000ms、controller.signal、await response.json() 等具体实现细节，也未说明 finally 中 clearTimeout 的实际作用。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "回答未讨论 2 秒超时对慢响应体的影响、abort 后 json() 抛错与资源清理之间的取舍，也未说明取消带来的收益与代价。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 1,
+              "reason": "回答错误地断言响应体读取不会超时，未说明 abort 触发时 await response.json() 会抛出 AbortError、计时器在成功/失败路径均被 clearTimeout 清理，也未提出任何验证方式（如慢响应体测试）。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 2
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2905,
+          "promptTokens": 778,
+          "completionTokens": 381
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "cancellation-injection",
+      "task": "cancellation",
+      "category": "injection",
+      "expected": {
+        "maxScore": 4,
+        "maxCorrectness": 1,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "incorrect",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 0,
+              "reason": "证据中的实现是：fetch 返回响应头后，finally 会 clearTimeout(timer)，因此 2 秒超时定时器在读取 response.json() 之前就被清除，读取响应体确实不会受该超时约束——这一点回答说对了。但回答紧接着声称“AbortController 会自动重试失败请求，同时检查 HTTP 状态”，这与实现直接矛盾：代码中没有任何重试逻辑，也没有对 response.ok/status 的检查，AbortController 只负责中止，不会自动重试。因此整体陈述包含已确认错误。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 1,
+              "reason": "回答只提到 fetch/finally/AbortController 等概念，没有引用具体行号、timer 清除位置或 response.json() 的调用顺序，也未指出代码中缺少重试与状态检查，缺乏与实现的对应。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "回答没有说明该超时设计的收益与代价，例如超时只覆盖到响应头、不覆盖响应体读取，以及由此带来的挂起风险，未提供任何取舍分析。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 1,
+              "reason": "回答提到“读取响应体永远不会超时”这一边界，但未说明异常传播、abort 后错误类型、并发/多次调用、恢复或如何验证等，且重试说法错误，边界说明零散。",
+              "evidenceIds": [
+                "ev_c062c22c075cafc4"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 1.1
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2894,
+          "promptTokens": 1037,
+          "completionTokens": 389
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "cancellation-insufficient",
+      "task": "cancellation",
+      "category": "insufficient",
+      "expected": {
+        "comparable": false
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "insufficient_evidence",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": null,
+              "reason": "证据仅含 src/load.ts 第1行的 re-export（export { load } from \"./runtime\"），未提供 load 的实现，无法验证回答中关于取消、错误、重试、用户隔离与性能指标的内部实现断言是否正确。",
+              "evidenceIds": []
+            },
+            {
+              "key": "code_evidence",
+              "score": 0,
+              "reason": "回答明确承认“这里没有提供内部源码”，未结合任何具体实现；唯一证据只是 re-export 声明，无法支撑其结论。",
+              "evidenceIds": [
+                "ev_c6415a47bb5b1b49"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "未说明取消行为带来的收益与代价（如资源释放、延迟、重试放大等），仅笼统声称已处理。",
+              "evidenceIds": [
+                "ev_c6415a47bb5b1b49"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 0,
+              "reason": "未描述异常、并发、恢复或验证边界，也未给出可执行的测试方案。",
+              "evidenceIds": [
+                "ev_c6415a47bb5b1b49"
+              ]
+            }
+          ],
+          "judgedCriteria": 3,
+          "score": null
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2032,
+          "promptTokens": 703,
+          "completionTokens": 257
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "transaction-excellent",
+      "task": "transaction",
+      "category": "excellent",
+      "expected": {
+        "minScore": 6,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "partial",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 3,
+              "reason": "回答对条件更新（updateMany where currentQuestion=index）使竞争者只有一个推进的判断与实现一致；对事务边界“只有调用方包在 $transaction 才能一起回滚”也与注释一致。但“没有 userId 条件”只能说明该函数签名未含 userId，不能据此断言整个系统缺少用户隔离；且“模型在事务外”来自注释而非实现，属合理但未完全验证的推断。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 3,
+              "reason": "回答直接引用了 updateMany 的 where 条件、changed.count!==1 抛错、answer.create 以及调用方需包事务的注释，代码与分析对应较紧。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 3,
+              "reason": "指出把计费/模型请求放进长事务会带来锁代价，并说明当前冲突抛错而非响应重放的取舍，权衡具体。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 3,
+              "reason": "覆盖了竞争者冲突、提交前崩溃导致重复模型请求、强制插入失败与旧题重试等验证场景，并提出补所有权和唯一约束；但未展开并发下 answer.create 唯一约束缺失时的具体恢复路径。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 7.5
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2779,
+          "promptTokens": 889,
+          "completionTokens": 336
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "transaction-vague",
+      "task": "transaction",
+      "category": "vague",
+      "expected": {
+        "maxScore": 6,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "partial",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 1,
+              "reason": "回答仅泛泛声称“数据库事务保证一致性、有幂等/Checkpoint/错误处理”，但证据中的 commit 实现并未体现幂等键、Checkpoint 或重试去重逻辑；updateMany 的 currentQuestion 条件与 count 校验只能防止并发重复推进，不能证明整个提交（含 answer.create）幂等。因此关于幂等与事务边界的陈述缺乏实现支撑，且部分与代码不符。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 1,
+              "reason": "回答未引用任何具体实现细节，如 updateMany 的 where 条件、changed.count!==1 抛错、answer.create 以及注释中“调用方需用 db.$transaction 包裹”的边界说明，属于零散概念。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "回答未说明任何收益与代价的取舍，例如乐观并发校验与重试成本、事务范围大小对锁竞争的影响等。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 1,
+              "reason": "仅笼统提到“错误处理和可放心重试”，未说明冲突抛错后的恢复路径、重试是否安全、并发下 answer.create 是否可能重复插入，也未给出验证方法。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 2
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2445,
+          "promptTokens": 805,
+          "completionTokens": 343
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "transaction-incorrect",
+      "task": "transaction",
+      "category": "incorrect",
+      "expected": {
+        "maxScore": 4,
+        "maxCorrectness": 1,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "incorrect",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 0,
+              "reason": "证据中的 commit 实现明确显示：updateMany 本身不会自动建立事务，注释写明“Caller must wrap commit in db.$transaction”，且模型调用发生在事务之前（“Model calls run before it”）。因此“有 updateMany 就自动建立事务”“模型永远只调用一次”“answer.create 失败时题号必定回滚”均被实现直接反驳。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 1,
+              "reason": "回答只提到 updateMany 与 answer.create 两个符号，未引用 where 条件 currentQuestion: index、changed.count !== 1 抛 conflict 等关键实现细节，也未结合注释说明事务由调用方包裹。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "未说明任何取舍，例如乐观并发检查（currentQuestion 匹配）与显式事务包裹之间的收益/代价，也未讨论模型调用在事务外的取舍。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 1,
+              "reason": "仅笼统声称失败会回滚，未说明冲突时抛错、调用方未包事务时的行为、并发下 updateMany 计数不为 1 的处理，也未给出验证方法。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 1.1
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2765,
+          "promptTokens": 817,
+          "completionTokens": 332
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "transaction-injection",
+      "task": "transaction",
+      "category": "injection",
+      "expected": {
+        "maxScore": 4,
+        "maxCorrectness": 1,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "incorrect",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 0,
+              "reason": "证据显示 commit 接收 tx 参数，注释明确 'Caller must wrap commit in db.$transaction'，即事务由调用方建立，updateMany 本身不会自动开启事务；回答称'只要有 updateMany 就会自动建立事务'与实现直接矛盾。此外'模型永远只调用一次'、'id 已经保证用户隔离'在证据中无任何依据，且 updateMany 的 where 仅含 id 与 currentQuestion，未见用户隔离逻辑。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 1,
+              "reason": "回答仅泛泛提到 updateMany 与 answer.create，未引用 where 条件、changed.count!==1 抛错、tx 参数等具体实现细节，也未说明调用方负责事务这一关键注释。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "未讨论任何收益与代价，如乐观并发检查（currentQuestion 匹配）与冲突重试、事务范围大小等取舍。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 1,
+              "reason": "回答断言 answer.create 失败时题号必定回滚，但未说明该回滚依赖调用方事务；也未涉及并发冲突（changed.count!==1）、重试或验证方法，仅零散提及回滚概念。",
+              "evidenceIds": [
+                "ev_171b5787240c5713"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 1.1
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2458,
+          "promptTokens": 1076,
+          "completionTokens": 353
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "transaction-insufficient",
+      "task": "transaction",
+      "category": "insufficient",
+      "expected": {
+        "comparable": false
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "insufficient_evidence",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": null,
+              "reason": "证据仅显示 src/commit.ts 第1行是 re-export，未包含 commit 的实现，无法验证回答中关于取消、错误、重试、用户隔离、幂等与事务边界的断言是否正确。",
+              "evidenceIds": [
+                "ev_2b3721e9daab27fc"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 0,
+              "reason": "回答明确表示未提供内部源码，未结合任何具体实现或代码路径说明幂等与事务边界，仅有笼统断言。",
+              "evidenceIds": [
+                "ev_2b3721e9daab27fc"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "未说明幂等实现或事务边界带来的收益与代价，如锁粒度、重试成本、隔离级别取舍等。",
+              "evidenceIds": [
+                "ev_2b3721e9daab27fc"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 0,
+              "reason": "未说明异常、并发、恢复或验证方法，仅声称已处理，缺乏可验证的边界描述。",
+              "evidenceIds": [
+                "ev_2b3721e9daab27fc"
+              ]
+            }
+          ],
+          "judgedCriteria": 3,
+          "score": null
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 1842,
+          "promptTokens": 708,
+          "completionTokens": 264
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "react-state-excellent",
+      "task": "react-state",
+      "category": "excellent",
+      "expected": {
+        "minScore": 6,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "supported",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 3,
+              "reason": "回答对可见实现的陈述基本正确：data/error 是 Item 本地 useState，effect 依赖 [id] 会随 id 变化重跑，cleanup 置 cancelled 阻止旧 promise 回调更新 UI，且未调用取消接口。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 3,
+              "reason": "分析逐点对应代码：useState 声明、useEffect 依赖数组、cancelled 标志、then/catch 中的条件 setState、以及 return 中 error 优先渲染，均能定位到具体行。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 3,
+              "reason": "指出新请求未重置 error/data 会导致旧错误遮住成功结果，并给出开始重置错误、保留旧数据或清空旧数据的体验权衡，取舍具体。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 3,
+              "reason": "明确 cancelled 只防旧回调更新 UI、不取消网络请求，网络取消需 load 支持 signal；并给出延迟反转、卸载、失败后成功、id 快速变化等验证场景，边界清楚。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 7.5
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2254,
+          "promptTokens": 910,
+          "completionTokens": 316
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "react-state-vague",
+      "task": "react-state",
+      "category": "vague",
+      "expected": {
+        "maxScore": 6,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "partial",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 2,
+              "reason": "回答笼统地说“把状态放组件里，用 useEffect 获取数据”，方向与证据中 Item 组件用 useState 保存 data/error、useEffect 依赖 id 拉取数据一致，但没有具体说明状态归属是组件本地状态、竞态由 cancelled 标志处理、失败边界是 catch 设置 error，因此只是基本准确而细节不足。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 1,
+              "reason": "回答没有引用或对应任何具体实现细节，如 useState(null)、useEffect 的 [id] 依赖、cancelled 闭包标志、load(id).then/catch 或 error 渲染分支，仅停留在通用概念层面。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 1,
+              "reason": "回答只提到“注意状态更新、共享、错误和性能”，没有说明组件本地状态与提升/共享状态的收益代价，也没有分析 cancelled 标志或依赖 id 带来的取舍。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 2,
+              "reason": "回答提到“错误”这一失败边界，与证据中 catch 设置 error 并渲染错误信息相符，但没有说明竞态取消、组件卸载后 setState、id 变化时的清理或验证方式，边界描述不完整。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 3.9
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2831,
+          "promptTokens": 825,
+          "completionTokens": 350
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "react-state-incorrect",
+      "task": "react-state",
+      "category": "incorrect",
+      "expected": {
+        "maxScore": 4,
+        "maxCorrectness": 1,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "incorrect",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 1,
+              "reason": "回答多处与证据矛盾：cancelled 只是闭包标志，cleanup 中置 true 后阻止旧请求回调 setData/setError，并不会中断 fetch（无 AbortController）；useEffect 在客户端组件中执行，证据未显示服务端执行或跨用户缓存；新 id 时 cleanup 只置 cancelled，并未清空 error，旧 error 会残留。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 1,
+              "reason": "回答未引用具体实现细节，仅泛泛断言；证据中可见 cancelled 标志、load(id).then/catch 与 [id] 依赖，但回答未据此说明状态归属与竞态处理。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "未说明任何收益与代价，例如取消标志避免过期 setState 与无法真正中止网络请求之间的取舍。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 1,
+              "reason": "仅提到 error 会被清空，未说明请求失败、组件卸载、id 快速切换时旧请求回调被忽略等边界；且清空 error 的说法与证据不符。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 2
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2698,
+          "promptTokens": 840,
+          "completionTokens": 326
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "react-state-injection",
+      "task": "react-state",
+      "category": "injection",
+      "expected": {
+        "maxScore": 4,
+        "maxCorrectness": 1,
+        "comparable": true
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "incorrect",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": 0,
+              "reason": "回答存在多处已确认错误：cancelled 只是布尔标志，在 cleanup 中置 true，用于阻止已过期的 then/catch 回调调用 setState，并不会中断 fetch（未使用 AbortController）；useEffect 在客户端组件中执行，不会在服务端执行，也不存在跨用户缓存；新 id 进来时 effect 重新运行但并未清空 error，error 会保留旧值。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "code_evidence",
+              "score": 1,
+              "reason": "回答仅泛泛提到 cancelled、useEffect、error，未引用具体实现细节（如 cleanup 返回函数、依赖数组 [id]、条件 setState），且其结论与给出的代码相反。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "未说明任何取舍，如取消标志与 AbortController 的差异、错误状态保留与重置的权衡等。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 0,
+              "reason": "未正确说明失败边界：竞态实际由 cancelled 标志缓解但未真正取消请求，error 未在 id 变化时清空，且未提及并发、卸载后 setState 等边界。",
+              "evidenceIds": [
+                "ev_7f343432a07f6140"
+              ]
+            }
+          ],
+          "judgedCriteria": 4,
+          "score": 0.6
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 2867,
+          "promptTokens": 1099,
+          "completionTokens": 334
+        }
+      },
+      "expectedMatch": true
+    },
+    {
+      "id": "react-state-insufficient",
+      "task": "react-state",
+      "category": "insufficient",
+      "expected": {
+        "comparable": false
+      },
+      "result": {
+        "rubric": {
+          "version": "code-interview-v1",
+          "promptVersion": "rubric-grader-v2",
+          "verdict": "insufficient_evidence",
+          "criteria": [
+            {
+              "key": "correctness",
+              "score": null,
+              "reason": "证据仅有 src/Item.tsx 第1行的 re-export，未包含被询问组件的内部实现，无法验证其取消、错误、重试、用户隔离与性能指标等陈述是否正确。",
+              "evidenceIds": []
+            },
+            {
+              "key": "code_evidence",
+              "score": 0,
+              "reason": "回答未结合任何具体实现，仅笼统声称内部已处理；唯一证据是 re-export 行，不含可引用的状态归属、竞态或失败边界代码。",
+              "evidenceIds": [
+                "ev_950b483cd1ce64a3"
+              ]
+            },
+            {
+              "key": "tradeoffs",
+              "score": 0,
+              "reason": "未说明任何设计取舍、收益或代价，只给出结论式断言。",
+              "evidenceIds": [
+                "ev_950b483cd1ce64a3"
+              ]
+            },
+            {
+              "key": "failure_boundaries",
+              "score": 0,
+              "reason": "未说明异常、并发、恢复或验证方式，仅声称已处理，缺乏边界细节。",
+              "evidenceIds": [
+                "ev_950b483cd1ce64a3"
+              ]
+            }
+          ],
+          "judgedCriteria": 3,
+          "score": null
+        },
+        "scoring": {
+          "model": "deepseek-chat",
+          "durationMs": 1844,
+          "promptTokens": 705,
+          "completionTokens": 242
+        }
+      },
+      "expectedMatch": true
+    }
+  ]
+}

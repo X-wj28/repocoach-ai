@@ -14,11 +14,18 @@
     "build": "npm run build --workspace apps/web && npm run build --workspace apps/api",
     "test": "npm run test:api",
     "test:api": "npm run build --workspace apps/api && node --test apps/api/test/*.test.cjs",
+    "test:web": "node --test apps/web/test/*.test.cjs",
+    "test:integration": "npm run build --workspace apps/api && node --test apps/api/test/integration/*.test.cjs",
+    "test:e2e": "npm run build --workspace apps/api && node --test apps/api/test/e2e/*.test.cjs",
+    "agent:smoke": "npm run build --workspace apps/api && npm run agent:smoke --workspace apps/api",
+    "eval:rubric": "npm run build --workspace apps/api && npm run eval:rubric --workspace apps/api",
+    "eval:rubric:live": "npm run build --workspace apps/api && npm run eval:rubric:live --workspace apps/api",
     "lint": "npm run lint --workspace apps/web",
     "format": "prettier --write .",
     "db:generate": "npm run prisma:generate --workspace apps/api",
     "db:migrate": "npm run prisma:migrate --workspace apps/api",
     "db:deploy": "npm run prisma:deploy --workspace apps/api",
+    "db:check": "npm run db:check --workspace apps/api",
     "db:import-sqlite": "npm run db:import-sqlite --workspace apps/api"
   },
   "devDependencies": {

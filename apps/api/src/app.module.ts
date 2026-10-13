@@ -12,6 +12,12 @@ import { AuthStore } from "./auth/auth.store";
 import { EmailService } from "./auth/email.service";
 import { SessionGuard } from "./auth/session.guard";
 import { PrismaService } from "./database/prisma.service";
+import { EvaluationStore } from "./agent/evaluation.store";
+import { EvaluationWorker } from "./agent/evaluation.worker";
+import { RubricScorer } from "./agent/rubric-scorer";
+import { EvaluationStreamService } from "./agent/evaluation-stream.service";
+import { TrainingMemoryStore } from "./agent/training-memory.store";
+import { TrainingMemoryController } from "./agent/training-memory.controller";
 
 @Module({
   controllers: [
@@ -19,6 +25,7 @@ import { PrismaService } from "./database/prisma.service";
     AgentController,
     ReportController,
     AuthController,
+    TrainingMemoryController,
   ],
   providers: [
     PrismaService,
@@ -29,6 +36,11 @@ import { PrismaService } from "./database/prisma.service";
     AgentService,
     GitHubService,
     DeepSeekService,
+    EvaluationStore,
+    EvaluationWorker,
+    RubricScorer,
+    EvaluationStreamService,
+    TrainingMemoryStore,
     ReportStore,
   ],
 })

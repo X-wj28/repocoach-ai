@@ -19,7 +19,14 @@ export class AppController {
 
   @Get("health")
   health() {
-    return { status: "ok", service: "repocoach-api", timestamp: new Date().toISOString() };
+    return {
+      status: "ok",
+      service: "repocoach-api",
+      timestamp: new Date().toISOString(),
+      agentContract: "durable-rubric-sse-v1",
+      revision:
+        process.env.RENDER_GIT_COMMIT ?? process.env.APP_REVISION ?? "local",
+    };
   }
 
   @Get("demo/project")
@@ -31,13 +38,16 @@ export class AppController {
       visibility: "public",
       stack: ["Next.js 14", "React", "TypeScript"],
       analyzedFiles: 19,
-      status: "synced"
+      status: "synced",
     };
   }
 
   @Post("projects/analyze")
   @UseGuards(SessionGuard)
   analyzeProject(@Body() body: AnalyzeProjectDto) {
-    return this.githubService.analyzePublicRepository(body.repoUrl, body.jobDescription);
+    return this.githubService.analyzePublicRepository(
+      body.repoUrl,
+      body.jobDescription,
+    );
   }
 }
