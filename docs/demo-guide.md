@@ -1,6 +1,6 @@
 # RepoCoach 演示与验收手册
 
-当前四阶段升级可在本地演示，线上地址仍是发布前版本。演示目标是让观众看到“回答如何被查证、评价如何保存、失败后如何继续”，再结合源码解释恢复边界。
+当前四阶段升级已于2026-10-14发布，可在[Render工作台](https://repocoach-web.onrender.com)或本地演示。演示目标是让观众看到“回答如何被查证、评价如何保存、失败后如何继续”，再结合源码解释恢复边界。线上版本和验收范围见[发布总结](release-summary.md)。
 
 ## 启动前准备
 
@@ -59,7 +59,7 @@ npm run lint
 npm run build
 ```
 
-两个数据库测试命令需要上面的 `TEST_DATABASE_URL`，可并行运行，各自使用独立随机 schema。`test:api`、`test:integration` 和 `test:e2e` 会重新构建 API，命令本身请顺序执行以免同时改写 `dist`。GitHub Actions 执行同样的检查；本地通过不等于尚未推送的 CI 已经运行。
+两个数据库测试命令需要上面的 `TEST_DATABASE_URL`，各自使用独立随机 schema。`test:api`、`test:integration` 和 `test:e2e` 会重新构建 API，命令本身请顺序执行以免同时改写 `dist`。GitHub Actions执行同样的检查，[发布提交CI](https://github.com/X-wj28/repocoach-ai/actions/runs/38387987516)已全部通过。
 
 `test:web` 用本地 HTTP 服务故意发送响应头后卡住响应体，验证请求会超时，包含正常响应和错误响应两种情况。`eval:rubric` 默认只校验 20 条合成样例；显式运行 `eval:rubric:live` 才会产生模型请求与费用。当前样例尚无人工标注或独立留出集。
 

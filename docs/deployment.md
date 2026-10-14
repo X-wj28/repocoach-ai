@@ -2,7 +2,7 @@
 
 For recovery from an expired Render database without a paid upgrade, see [the Neon recovery steps](neon-recovery.md).
 
-The current deployment uses Render for the frontend and API, and Neon for PostgreSQL after the database recovery. Keep the existing Neon `DATABASE_URL` when updating the API; a code upgrade does not require creating a new database. This guide is prepared for the final coordinated release; the local Agent upgrade has not yet been deployed.
+The current deployment uses Render for the frontend and API, and Neon for PostgreSQL after the database recovery. Keep the existing Neon `DATABASE_URL` when updating the API; a code upgrade does not require creating a new database. The four-stage Agent upgrade was deployed on 2026-10-14 at commit `d82d511f06147de90547b6a3632eedf971028686`; both existing free services are Live and the eight migrations are applied. See [the release results](release-summary.md). The creation instructions below also document setup for a fresh deployment; an update uses the existing services.
 
 ## Deployment layout
 
@@ -55,7 +55,7 @@ If choosing a different PostgreSQL provider later, use that provider's supported
 | `DEEPSEEK_API_KEY`  | Your DeepSeek key, optional                             |
 | `DEEPSEEK_MODEL`    | `deepseek-chat`                                         |
 | `DEEPSEEK_BASE_URL` | `https://api.deepseek.com`                              |
-| `GITHUB_TOKEN`      | Optional read-only GitHub token                         |
+| `GITHUB_TOKEN`      | Dedicated public-repository read-only GitHub token; configured in the current deployment to avoid exhausted anonymous limits |
 | `EMAIL_VERIFICATION_REQUIRED` | `true` to require Gmail code verification        |
 | `RESEND_API_KEY`     | Resend HTTPS API key                                  |
 | `EMAIL_FROM`         | Resend-verified sender, or `RepoCoach <onboarding@resend.dev>` for testing |
@@ -68,7 +68,7 @@ When the service is live, open:
 https://YOUR-RENDER-SERVICE.onrender.com/api/v1/health
 ```
 
-It should return a JSON object with `status: "ok"`.
+It should return a JSON object with `status: "ok"`, `agentContract: "durable-rubric-sse-v1"` and the deployed `revision`. The frontend HTML contains matching `repocoach-contract` and `repocoach-revision` metadata. Render supplies `RENDER_GIT_COMMIT` at build/runtime, so these markers identify the actual running revision. Documentation-only commits can use `[skip render]` and do not change the running revision.
 
 ## 3. Deploy the Next.js frontend on Render
 
@@ -120,7 +120,7 @@ These settings are required when the web and API use different HTTPS origins. Lo
 
 Apply migration `20261013090000_durable_rubric_scoring` along with all earlier migrations before starting the new API. It adds `evaluation_runs` and makes answer scores nullable. The existing API Docker entry point applies committed migrations automatically.
 
-Also apply `20261013120000_events_and_training_memory` for SSE events, practice observations and memory epochs. Existing runs receive a state snapshot, without invented historical steps. Keep frontend and API on the same revision. The reverse proxy must pass `text/event-stream` without buffering; verify Last-Event-ID reconnect and Cookie authentication in the target environment. This release sends 15-second heartbeats and bounds each connection to 150 seconds. No Render deployment has been performed for this upgrade yet.
+Also apply `20261013120000_events_and_training_memory` for SSE events, practice observations and memory epochs. Existing runs receive a state snapshot, without invented historical steps. Keep frontend and API on the same revision. The reverse proxy must pass `text/event-stream` without buffering; verify Last-Event-ID reconnect and Cookie authentication in the target environment. This release sends 15-second heartbeats and bounds each connection to 150 seconds. The current Render deployment passed a real HTTP disconnect/replay check, browser cookie login and refresh, four model-scored turns, Markdown export and memory clear without deleting history. Production email verification is currently disabled and email delivery was not exercised.
 
 Deploy the web and API from the same revision: answer submission now returns a 202 task response, and the new web polls its status and offers stage retries. The worker starts inside NestJS and uses PostgreSQL leases; no separate Redis or worker service is required. Pending stages recover when the API starts or a progress request wakes it. Idle queues do not query continuously.
 

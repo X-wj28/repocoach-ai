@@ -1,0 +1,107 @@
+{
+  "date": "2026-10-14",
+  "timezone": "Asia/Shanghai",
+  "runtimeRevision": "d82d511f06147de90547b6a3632eedf971028686",
+  "ci": {
+    "revision": "d82d511f06147de90547b6a3632eedf971028686",
+    "conclusion": "success",
+    "url": "https://github.com/X-wj28/repocoach-ai/actions/runs/38387987516"
+  },
+  "deployments": {
+    "api": {
+      "status": "live",
+      "revision": "d82d511f06147de90547b6a3632eedf971028686",
+      "url": "https://repocoach-api.onrender.com",
+      "finishedAtUtc": "2026-10-14T09:03:09.066524Z",
+      "plan": "free"
+    },
+    "web": {
+      "status": "live",
+      "revision": "d82d511f06147de90547b6a3632eedf971028686",
+      "url": "https://repocoach-web.onrender.com",
+      "finishedAtUtc": "2026-10-14T08:48:23.723153Z",
+      "plan": "free"
+    }
+  },
+  "checks": {
+    "apiTests": 68,
+    "webTests": 4,
+    "postgresScenarios": 10,
+    "httpScenarios": 8,
+    "migrations": 8,
+    "offlineRubricFixtures": 20
+  },
+  "http": {
+    "apiRevision": "d82d511f06147de90547b6a3632eedf971028686",
+    "webRevision": "d82d511f06147de90547b6a3632eedf971028686",
+    "registrationCookieCors": true,
+    "import": {
+      "source": "online API import after read-only Token configuration",
+      "status": 201,
+      "commit": "d82d511f06147de90547b6a3632eedf971028686",
+      "analyzedFiles": 14,
+      "indexedFiles": 99
+    },
+    "sse": {
+      "disconnectedAfter": 3,
+      "resumedEvents": 10,
+      "totalEvents": 13,
+      "continuous": true
+    },
+    "report": {
+      "answers": 4,
+      "scored": 4,
+      "unjudged": 0,
+      "demo": 0,
+      "average": 4.3,
+      "readiness": 43
+    },
+    "memory": {
+      "observations": 16,
+      "focus": 3,
+      "isolated": true
+    },
+    "personalizedPractice": 1,
+    "idempotencyAndOwnerIsolation": true,
+    "completedAt": "2026-10-14T08:58:44.243Z"
+  },
+  "browser": {
+    "revision": "d82d511f06147de90547b6a3632eedf971028686",
+    "browserLogin": true,
+    "cookieRefresh": true,
+    "historyAnswers": 4,
+    "rubricItems": 16,
+    "persistedEvents": true,
+    "markdownExport": true,
+    "mobileWidth": 390,
+    "mobileNoOverflow": true,
+    "memoryClear": true,
+    "historyRetained": true,
+    "logout": true,
+    "completedAt": "2026-10-14T09:03:40.948Z"
+  },
+  "configuration": {
+    "existingNeonPreserved": true,
+    "githubPublicReadTokenConfigured": true,
+    "originalAutoDeployRestored": true,
+    "emailVerificationRequired": false,
+    "emailDeliveryTested": false
+  },
+  "limits": [
+    "Synthetic rubric examples have no human labels or independent holdout.",
+    "Online SSE disconnect used an HTTP client; native browser automatic reconnect was separately tested locally.",
+    "Scores are model estimates, not certified ability.",
+    "A stage may repeat an external model call after a crash before its checkpoint."
+  ],
+  "finalCheck": {
+    "checkedAt": "2026-10-14T09:10:59.182Z",
+    "revision": "d82d511f06147de90547b6a3632eedf971028686",
+    "web": 200,
+    "api": 200,
+    "freePlans": true,
+    "autoDeployRestored": true,
+    "historySurvivedApiRedeploy": true,
+    "replayAfterRestartWithoutModelCall": true,
+    "fixtureSessionsRevoked": true
+  }
+}

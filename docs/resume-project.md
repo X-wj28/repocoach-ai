@@ -67,19 +67,19 @@ Compose 先等待 PostgreSQL health check 通过，API 启动命令应用 Prisma
 5. 打开训练复盘、能力报告和 Markdown 导出。
 6. 展开执行过程，演示SSE断线补发、训练计划来源和清除记忆。
 7. 用专用临时账号fixture演示仅重试评分，明确故障由测试注入。
-8. 展示单元测试、真实数据库恢复测试和合成评测；推送后再展示本次CI结果。
+8. 展示单元测试、真实数据库恢复测试、合成评测和已通过的GitHub CI结果。
 
 ## 诚实边界
 
 - GitHub 仓库仅支持公开只读访问。
 - 未设置 DeepSeek Key 时产品使用无分演示，已配置模型的故障进入失败状态。
 - 已实现受限模型工具循环、阶段恢复、Rubric、SSE和训练记忆；逐工具结果checkpoint、分布式事件总线及人工校准仍未实现。
-- 原版本已通过 Render 部署 Web、API 和 PostgreSQL；本次升级的代码还需要应用迁移并更新部署。
+- 四阶段升级已于2026-10-14发布至Render免费Web/API，数据库使用Neon；8个迁移和真实线上流程已验证。免费实例可能冷启动，未提供生产SLA。
 
 ## Agent 应用工程岗位的表述
 
 基于 Next.js、NestJS、PostgreSQL 和 DeepSeek 构建代码证据驱动的项目面试 Agent。设计受限 Tool Calling 与 commit/blob 固定的取证流程；通过四项 Rubric、证据 ID 校验和服务端加权计算形成可复盘评价。以 PostgreSQL 持久化阶段、租约和事务实现会话恢复、幂等提交与仅重试评分，配套合成评测和真实数据库故障验证。
 
-可深入讲解：幂等与至少一次调用、checkpoint位置、旧worker写入屏障、SSE序号与补发、记忆清除epoch及引用的语义边界。66项API单元测试、4项前端请求边界测试、10个PostgreSQL场景与8个完整HTTP流程场景已通过；真实模型事件流和浏览器重连/清除已验证，评分质量仍需人工标注集评测。现场演示见[演示手册](demo-guide.md)。
+可深入讲解：幂等与至少一次调用、checkpoint位置、旧worker写入屏障、SSE序号与补发、记忆清除epoch及引用的语义边界。68项API单元测试、4项前端请求边界测试、10个PostgreSQL场景与8个完整HTTP流程场景及Linux CI已通过；真实线上四题、SSE补发、浏览器复盘/导出和记忆清除已验证，评分质量仍需人工标注集评测。现场演示见[演示手册](demo-guide.md)，发布成效见[升级总结](release-summary.md)。
 
 本项目与通用终端 Coding Agent 互补：后者展示工具执行环境与权限，RepoCoach 展示领域取证、可解释评价和业务状态恢复。不要将合成场景结果表述为真实业务评分质量提升。

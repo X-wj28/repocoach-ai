@@ -45,7 +45,7 @@ RepoCoach FE 会读取公开的 React/Next.js 仓库和目标岗位 JD，围绕�
 
 面试问题、评价和报告由实际 API 返回。规则演示反馈不计入能力评分。截图可用于快速了解主要用户流程。
 
-Agent 工程能力的分阶段升级见 [升级路线](docs/agent-upgrade-roadmap.md)，状态机与评测基线见 [评分与恢复说明](docs/rubric-and-recovery.md)，实时进度与练习计划见 [事件与记忆](docs/events-and-memory.md)，实际验证见 [验收记录](docs/agent-acceptance.md)。八分钟演示流程、故障演示和检查命令见 [演示手册](docs/demo-guide.md)。新增 Agent 功能尚未发布到线上演示环境。
+Agent 工程能力的分阶段升级见 [升级路线](docs/agent-upgrade-roadmap.md)，状态机与评测基线见 [评分与恢复说明](docs/rubric-and-recovery.md)，实时进度与练习计划见 [事件与记忆](docs/events-and-memory.md)，实际验证见 [验收记录](docs/agent-acceptance.md)。八分钟演示流程、故障演示和检查命令见 [演示手册](docs/demo-guide.md)。四阶段升级已于2026-10-14发布到上述线上环境，完成真实四题、SSE补发、浏览器登录、复盘导出和记忆清除验收；使用Render免费Web/API与Neon数据库。
 
 ## 简历与面试材料
 
