@@ -72,7 +72,7 @@
 - 恢复：草稿跨刷新、读取进度失败重试、重开训练确认与失败保留、重复点击保护、存储不可用、提交失败、服务端回答优先、完成反馈恢复、无 SSE 轮询、处理中禁止新训练、启动/提交迟到响应隔离、导入弹窗错误、401 与服务故障区分、退出清草稿与账号隔离。
 - 布局：1440/1600px 桌面与 390px 手机截图检查；报告、复盘和源码侧栏均无页面横向溢出，浏览器无未捕获异常。
 
-浏览器验收已纳入仓库：`apps/web/test/browser/acceptance.cjs`，执行 `npm run build` 后运行 `npm run test:browser`，需要已安装 Chrome/Edge。结果写入被 Git 忽略的 `data/browser-acceptance-<uuid>/`。CI 在生产构建后执行同一套浏览器检查，失败时保存截图与检查结果；本轮尚未推送触发远端 CI。
+浏览器验收已纳入仓库：`apps/web/test/browser/acceptance.cjs`，执行 `npm run build` 后运行 `npm run test:browser`，需要已安装 Chrome/Edge。结果写入被 Git 忽略的 `data/browser-acceptance-<uuid>/`。CI 在生产构建后执行同一套浏览器检查，失败时保存截图与检查结果；2026-10-28 [发布提交 CI](https://github.com/X-wj28/repocoach-ai/actions/runs/40662290908)已通过全部检查。
 
 此项验证交互与接口契约，不代表再次调用真实 DeepSeek 或完成线上验收。完整范围、数据库检查与限制见[求职演示版本地验收](demo-readiness.md)。
 

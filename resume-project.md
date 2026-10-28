@@ -2,6 +2,8 @@
 
 > 面向前端实习岗位的项目表述。请根据自己的实际开发过程调整措辞，面试中不要声称未参与或不了解的实现细节。
 
+本文保留仓库根目录入口；完整的最新技术亮点、恢复边界与面试讲解见 [docs/resume-project.md](docs/resume-project.md)，当前运行版本与真实验收见 [2026-10-28 发布记录](docs/releases/2026-10-28.md)。
+
 ## 简历项目描述
 
 ### 一行版本
@@ -17,13 +19,14 @@
 ### 技术亮点
 
 - 使用 Next.js 14 + TypeScript 构建响应式工作台，包含注册登录、仓库导入、连续问答、复盘导出和能力报告等完整用户流程。
-- 使用 NestJS 编排 GitHub Public API 和 DeepSeek；对模型输出做 JSON 解析与结构校验，Provider 异常时回退到本地确定性评分，避免 AI 服务故障阻塞主流程。
+- 使用 NestJS 编排固定代码版本的受限 Tool Calling 与四项 Rubric 评分；取证与评分独立持久化，Provider 故障保留失败阶段，重试评分复用已保存依据，不改成演示分。
 - 使用 Prisma + PostgreSQL 设计用户、会话、面试和回答关联模型；通过 HttpOnly Cookie 与按 userId 查询实现会话管理和数据隔离。
-- 配置 Docker Compose 编排 Web、API、PostgreSQL，加入健康检查和自动 Prisma 迁移；通过 GitHub Actions 执行 Prisma 生成、Lint、4 个 API 测试和生产构建。
+- 构建五阶段可视化训练工作台，源码与评分引用联动，支持草稿恢复、逐题复盘、交互式报告和本次训练小结。
+- 配置 Docker Compose、健康检查和自动 Prisma 迁移；GitHub CI 通过 69 项 API 测试、19 项前端测试、11 个 PostgreSQL 场景、8 个 HTTP 场景和六组浏览器验收。Render 免费前后端连接现有 Neon 数据库。
 
 ## 30 秒介绍
 
-我做了一个帮助前端实习生练习项目面试表达的工具。用户导入公开 GitHub 项目并填写岗位 JD 后，后端先提取仓库上下文，再由 Agent 围绕真实文件提问。用户的回答会被评分并保存到 PostgreSQL，最后按 React、Next.js、工程化和性能四个维度生成训练报告。为了让 AI 依赖可控，我同时实现了 DeepSeek 调用和本地回退策略；部署上用 Docker Compose 管理三服务，并用 GitHub Actions 做持续验证。
+我做了一个基于真实代码的项目面试 Agent。导入公开仓库后固定代码版本，以受限工具查证回答，再给出带源码引用的四项评价。回答、取证和评分分阶段持久化，评分失败可以复用证据继续；前端把执行状态、源码、逐题复盘和下一次练习连接起来。已有真实数据库、HTTP 和浏览器验证，评分质量尚未经独立人工校准。
 
 ## 高频追问与回答方向
 
@@ -37,7 +40,7 @@
 
 ### AI 返回不符合预期怎么办？
 
-DeepSeek 返回内容先被解析和校验，只有符合 Question/Evaluation 合约的数据才会进入后续流程。如果模型超时、网络错误或输出格式无效，API 会转用本地确定性提问和评分，因此训练主流程仍然可用。
+模型输出、分项范围和证据 ID 通过校验后才能保存成功评价。模型超时或格式无效会保存阶段失败并保留题号；取证已完成时只重试评分。未配置模型才使用无分演示反馈，演示和无法判断不计入能力均分。
 
 ### 为什么选择 Prisma 和 PostgreSQL？
 
@@ -59,5 +62,5 @@ Compose 先等待 PostgreSQL health check 通过，API 启动命令应用 Prisma
 ## 诚实边界
 
 - GitHub 仓库仅支持公开只读访问。
-- 未设置 DeepSeek Key 时产品使用本地评分兜底，不应宣称每次评分都由大模型生成。
-- 当前版本已通过 Render 部署 Web、API 和 PostgreSQL，可在简历中写明线上演示地址；同时保留 Docker Compose 作为本地开发和自托管方案。
+- 未设置 DeepSeek Key 时使用不计入能力分的演示反馈，已配置模型后的故障保留为失败阶段。
+- 当前 Web、API 部署在 Render 免费服务，PostgreSQL 位于 Neon；保留 Docker Compose 作为本地开发和自托管方案。

@@ -35,7 +35,7 @@ RepoCoach FE 会读取公开的 React/Next.js 仓库和目标岗位 JD，围绕�
 
 ## 产品界面
 
-新版[可视化训练工作台、逐题复盘与交互式能力报告](docs/visual-workbench.md)扩大回答区，以阶段条展示持久化任务进度；工具事件和评分引用可以打开源码。报告支持维度选择、最近训练曲线及练习建议直达原题。草稿支持刷新恢复，失败有重试入口，迟到请求不会覆盖新项目。2026-10-28 已完成[本地验收](docs/demo-readiness.md)，本轮 CI 与 Render 发布状态见[发布记录](docs/releases/2026-10-28.md)。
+新版[可视化训练工作台、逐题复盘与交互式能力报告](docs/visual-workbench.md)扩大回答区，以阶段条展示持久化任务进度；工具事件和评分引用可以打开源码。报告支持维度选择、最近训练曲线及练习建议直达原题。草稿支持刷新恢复，失败有重试入口，迟到请求不会覆盖新项目。2026-10-28 已通过 GitHub CI 并部署到 Render，本轮提交和线上验证见[发布记录](docs/releases/2026-10-28.md)。
 
 追加的[训练体验升级](docs/training-experience.md)提供回答提纲、Ctrl/⌘ + Enter 提交、复制与清空确认，以及训练计划加载、重试、清除计数和过期请求隔离。
 
@@ -177,7 +177,7 @@ npm run db:import-sqlite # 导入旧 SQLite 数据，可重复执行
 8. 前后端生产构建
 9. Chromium 生产界面验收；失败保存截图和检查结果
 
-本轮配置已加入浏览器验收，本地结果见[求职演示版本地验收](docs/demo-readiness.md)。尚未推送运行新版远端 CI。
+本轮 CI 已执行六组生产界面浏览器验收，与 API、真实 PostgreSQL、完整 HTTP 流程和构建一起通过。见[发布提交 CI](https://github.com/X-wj28/repocoach-ai/actions/runs/40662290908)与[本地验证范围](docs/demo-readiness.md)。
 
 ## 当前范围
 

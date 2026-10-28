@@ -37,7 +37,7 @@
 
 数据库测试使用本机临时 PostgreSQL、随机 schema 与独立测试账号，测试后删除各自 schema 并停止临时数据库。Docker Desktop 的本机 socket 故障未纳入本项目修复结果；本轮未通过 Docker 验证镜像构建，也未更改 Docker 数据卷。
 
-浏览器使用已安装的 Chromium 内核浏览器，模拟 API 故障和迟到响应；真实数据库与 NestJS HTTP 测试是另外一层验证。本轮没有再次调用真实 DeepSeek、GitHub、邮件服务，也没有进行新版线上验收。新版 CI 已加入检查，需推送后才有远端运行结果，不能将历史 CI 记录当作本轮结果。
+本页浏览器检查使用已安装的 Chromium 内核浏览器，模拟 API 故障和迟到响应；真实数据库与 NestJS HTTP 测试是另外一层验证。这些本地检查不调用真实 DeepSeek、GitHub 或邮件服务。后续的真实线上模型、仓库与界面验收另见[本轮发布记录](releases/2026-10-28.md)。2026-10-28 [发布提交 CI](https://github.com/X-wj28/repocoach-ai/actions/runs/40662290908)已执行并通过全部检查。
 
 可机器读取的结果见 [demo-verification.json](demo-verification.json)，记录本地改动的基线提交及验收范围，不作为线上发布标记。
 

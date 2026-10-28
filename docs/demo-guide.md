@@ -2,7 +2,7 @@
 
 当前四阶段升级已于2026-10-14发布，可在[Render工作台](https://repocoach-web.onrender.com)或本地演示。演示目标是让观众看到“回答如何被查证、评价如何保存、失败后如何继续”，再结合源码解释恢复边界。线上版本和验收范围见[发布总结](release-summary.md)。
 
-2026-10-28 已完成本地求职演示版：增加宽回答区、真实阶段条、源码侧栏、逐题复盘、交互式报告，以及草稿与训练恢复。此轮尚未部署，演示新版请运行本地代码；完成标准与验证结果见[本地验收](demo-readiness.md)。
+2026-10-28 求职演示版已通过 GitHub CI 并部署到 Render：增加宽回答区、真实阶段条、源码侧栏、逐题复盘、交互式报告、回答操作和本次小结，以及草稿与训练恢复。运行版本和线上验证见[本轮发布记录](releases/2026-10-28.md)，可重复检查范围见[本地验收](demo-readiness.md)。
 
 ## 启动前准备
 
@@ -66,7 +66,7 @@ npm run build
 npm run test:browser
 ```
 
-两个数据库测试命令需要上面的 `TEST_DATABASE_URL`，各自使用独立随机 schema。`test:api`、`test:integration` 和 `test:e2e` 会重新构建 API，命令本身请顺序执行以免同时改写 `dist`。GitHub Actions 配置了相同检查，历史[发布提交 CI](https://github.com/X-wj28/repocoach-ai/actions/runs/38387987516)对应 2026-10-14；本轮新增的浏览器步骤已在本地通过，尚未推送触发远端执行。
+两个数据库测试命令需要上面的 `TEST_DATABASE_URL`，各自使用独立随机 schema。`test:api`、`test:integration` 和 `test:e2e` 会重新构建 API，命令本身请顺序执行以免同时改写 `dist`。GitHub Actions 配置了相同检查；2026-10-28 [发布提交 CI](https://github.com/X-wj28/repocoach-ai/actions/runs/40662290908)已经全部通过，含新增的六组生产界面浏览器验收。
 
 `test:web` 验证 HTTP 响应体超时、登录错误分类、草稿隔离、存储降级、阶段和报告数据边界。`test:browser` 用生产前端连接隔离固定 API，启动随机本机端口，复现刷新、评分失败、迟到响应、Storage 故障、账号切换与手机布局；需要已有 Chrome/Edge，不调用真实模型，截图与检查结果写入 `data/browser-acceptance-<uuid>/`。
 

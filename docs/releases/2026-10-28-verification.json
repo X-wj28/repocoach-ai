@@ -1,0 +1,111 @@
+{
+  "date": "2026-10-28",
+  "timezone": "Asia/Shanghai",
+  "runtimeRevision": "f0287a7d86a767526996d31ddf2114dc24bf7a46",
+  "ci": {
+    "id": 40662290908,
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/X-wj28/repocoach-ai/actions/runs/40662290908",
+    "revision": "f0287a7d86a767526996d31ddf2114dc24bf7a46"
+  },
+  "deployments": {
+    "api": {
+      "status": "live",
+      "revision": "f0287a7d86a767526996d31ddf2114dc24bf7a46",
+      "url": "https://repocoach-api.onrender.com",
+      "plan": "free",
+      "finishedAtUtc": "2026-10-28T09:19:36.388141Z"
+    },
+    "web": {
+      "status": "live",
+      "revision": "f0287a7d86a767526996d31ddf2114dc24bf7a46",
+      "url": "https://repocoach-web.onrender.com",
+      "plan": "free",
+      "finishedAtUtc": "2026-10-28T09:31:08.899267Z"
+    }
+  },
+  "checks": {
+    "apiTests": 69,
+    "webTests": 19,
+    "postgresScenarios": 11,
+    "httpScenarios": 8,
+    "browserGroups": 6,
+    "offlineRubricFixtures": 20,
+    "humanReviewed": 0,
+    "newMigrations": 0
+  },
+  "http": {
+    "apiRevision": "f0287a7d86a767526996d31ddf2114dc24bf7a46",
+    "registrationCookieCors": true,
+    "sse": {
+      "disconnectedAfter": 3,
+      "resumedEvents": 4,
+      "totalEvents": 7,
+      "continuous": true
+    },
+    "webRevision": "f0287a7d86a767526996d31ddf2114dc24bf7a46",
+    "report": {
+      "answers": 4,
+      "scored": 3,
+      "unjudged": 1,
+      "demo": 0,
+      "average": 3.8,
+      "readiness": 38
+    },
+    "memory": {
+      "observations": 15,
+      "focus": 3,
+      "isolated": true
+    },
+    "personalizedPractice": 1,
+    "idempotencyAndOwnerIsolation": true,
+    "completedAt": "2026-10-28T09:35:24.782Z"
+  },
+  "repositoryCommit": "f0287a7d86a767526996d31ddf2114dc24bf7a46",
+  "browser": {
+    "revision": "f0287a7d86a767526996d31ddf2114dc24bf7a46",
+    "browserLogin": true,
+    "crossOriginCookies": true,
+    "cookieRefresh": true,
+    "answerOutline": true,
+    "draftRefreshRecovery": true,
+    "capabilityReport": true,
+    "summaryAnswers": 4,
+    "summaryToExactReview": true,
+    "fourCriterionReview": true,
+    "threeDialogSourceStack": true,
+    "persistedEvents": true,
+    "markdownExportAllQuestions": true,
+    "mobileWidth": 390,
+    "mobileNoOverflow": true,
+    "mobileFooterVisible": true,
+    "sourceAndSummaryScreenshots": true,
+    "clearMemoryPreservesHistory": true,
+    "clearedObservations": 15,
+    "acceptanceDraftRemoved": true,
+    "logout": true,
+    "uncaughtExceptions": 0,
+    "completedAt": "2026-10-28T09:36:44.232Z"
+  },
+  "configuration": {
+    "existingNeonPreserved": true,
+    "freePlansPreserved": true,
+    "githubAboutUpdated": true,
+    "originalAutoDeployRestored": true,
+    "emailDeliveryTested": false
+  },
+  "finalCheck": {
+    "at": "2026-10-28T09:37:43.951Z",
+    "api": 200,
+    "web": 200,
+    "matchingRuntimeRevision": true,
+    "acceptanceSessionsRevoked": true
+  },
+  "limits": [
+    "Synthetic rubric examples have no human labels or independent holdout.",
+    "Screenshots and test success do not measure learning improvement or interview pass probability.",
+    "Free instances can cold-start; production throughput and SLA were not tested.",
+    "A crash before checkpoint can repeat an external model request."
+  ]
+}

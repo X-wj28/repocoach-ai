@@ -1,9 +1,11 @@
 {
   "verifiedOn": "2026-10-28",
-  "status": "local-verified",
+  "status": "verified-and-released",
   "baseCommit": "e64d5cd7528c9b94f7aa61880cc1032fc253a6e5",
-  "includesUncommittedChanges": true,
-  "deployed": false,
+  "verifiedRuntimeCommit": "f0287a7d86a767526996d31ddf2114dc24bf7a46",
+  "includesUncommittedChanges": false,
+  "deployed": true,
+  "releaseVerification": "releases/2026-10-28-verification.json",
   "checks": {
     "api": { "passed": 69, "failed": 0 },
     "web": { "passed": 19, "failed": 0 },
@@ -45,9 +47,14 @@
     "isolatedSchemasRemoved": true,
     "serverStopped": true
   },
-  "ci": { "browserStepConfigured": true, "remoteRunForThisUpgrade": false },
+  "ci": {
+    "browserStepConfigured": true,
+    "remoteRunForThisUpgrade": true,
+    "conclusion": "success",
+    "url": "https://github.com/X-wj28/repocoach-ai/actions/runs/40662290908"
+  },
   "limits": {
-    "liveProviderRevalidation": false,
+    "liveProviderRevalidation": true,
     "dockerBuildRevalidation": false,
     "productionLoadTest": false,
     "humanCalibratedScoring": false

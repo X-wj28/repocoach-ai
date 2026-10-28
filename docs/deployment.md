@@ -2,7 +2,7 @@
 
 For recovery from an expired Render database without a paid upgrade, see [the Neon recovery steps](neon-recovery.md).
 
-The current deployment uses Render for the frontend and API, and Neon for PostgreSQL after the database recovery. Keep the existing Neon `DATABASE_URL` when updating the API; a code upgrade does not require creating a new database. The four-stage Agent upgrade was deployed on 2026-10-14 at commit `d82d511f06147de90547b6a3632eedf971028686`; both existing free services are Live and the eight migrations are applied. See [the release results](release-summary.md). The creation instructions below also document setup for a fresh deployment; an update uses the existing services.
+The current deployment uses Render for the frontend and API, and Neon for PostgreSQL after the database recovery. Keep the existing Neon `DATABASE_URL` when updating the API; a code upgrade does not require creating a new database. The visual workbench release was deployed on 2026-10-28 at commit `f0287a7d86a767526996d31ddf2114dc24bf7a46`; both existing free services are Live, with the same Neon database and eight existing migrations. No new migration was added. See [the current release results](releases/2026-10-28.md). The creation instructions below also document setup for a fresh deployment; an update uses the existing services.
 
 ## Deployment layout
 
