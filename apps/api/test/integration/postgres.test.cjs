@@ -193,6 +193,61 @@ test(
     );
 
     await t.test(
+      "only the latest session resumes, without reviving abandoned sessions after completion",
+      async () => {
+        const scopedProject = {
+          ...project,
+          id: `session-project-${randomUUID()}`,
+        };
+        await prisma.projectSnapshot.create({ data: scopedProject });
+        const ids = [`old-${randomUUID()}`, `latest-${randomUUID()}`];
+        for (const [index, id] of ids.entries()) {
+          await store.createInterview({
+            id,
+            userId,
+            projectId: scopedProject.id,
+            projectName: scopedProject.name,
+            projectUrl: scopedProject.url,
+            jobDescription: "恢复测试",
+            totalQuestions: 1,
+            questions: [question],
+            projectContext: scopedProject,
+          });
+          await prisma.interview.update({
+            where: { id },
+            data: { startedAt: new Date(`2026-01-0${index + 1}T00:00:00Z`) },
+          });
+        }
+        assert.equal(
+          (await store.getActiveInterview(scopedProject.id, userId))
+            .interviewId,
+          ids[1],
+        );
+        assert.equal(
+          await store.getActiveInterview(scopedProject.id, "another-user"),
+          null,
+        );
+        const input = turn(ids[1]);
+        input.evaluation.projectId = scopedProject.id;
+        await store.recordAnswer(input);
+        const restartedStore = new ReportStore(competingClient);
+        assert.equal(
+          await restartedStore.getActiveInterview(scopedProject.id, userId),
+          null,
+        );
+        assert.equal(
+          (await restartedStore.getInterviewState(ids[0], userId)).status,
+          "IN_PROGRESS",
+        );
+        assert.equal(
+          (await restartedStore.getInterviewDetail(ids[1], userId)).answers
+            .length,
+          1,
+        );
+      },
+    );
+
+    await t.test(
       "a newly constructed service replays the saved turn without another model call",
       async () => {
         const id = await createInterview();

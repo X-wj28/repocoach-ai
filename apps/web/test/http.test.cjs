@@ -68,3 +68,12 @@ test("a non-JSON success response produces a readable error", async (t) => {
   );
   await assert.rejects(requestJson(url), /返回了无效数据/);
 });
+
+test("authentication rejection is distinguishable from a temporary API outage", async (t) => {
+  const url = await serve(t, (req, res) => {
+    res.writeHead(req.url === "/unauthorized" ? 401 : 503, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ message: "session check failed" }));
+  });
+  await assert.rejects(requestJson(`${url}/unauthorized`), (error) => error instanceof exported.ApiError && error.status === 401);
+  await assert.rejects(requestJson(`${url}/outage`), (error) => error instanceof exported.ApiError && error.status === 503);
+});

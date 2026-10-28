@@ -1,3 +1,13 @@
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export async function requestJson<T>(
   url: string,
   init?: RequestInit,
@@ -23,7 +33,10 @@ export async function requestJson<T>(
       } catch {
         // Preserve a non-JSON server error as text.
       }
-      throw new Error(message || `API request failed with ${response.status}`);
+      throw new ApiError(
+        message || `API request failed with ${response.status}`,
+        response.status,
+      );
     }
     // Await the body before clearing the timer: receiving headers alone does
     // not mean the response finished, including when a proxy stalls mid-body.

@@ -2,6 +2,26 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 const { ReportStore } = require("../dist/report/report.store.js");
 
+test("a completed newest session does not resume an older unfinished session", async () => {
+  let lookup;
+  const store = new ReportStore({
+    interview: {
+      findFirst: async (query) => {
+        lookup = query;
+        return {
+          id: "new-complete",
+          status: "COMPLETED",
+          questions: [],
+          currentQuestion: 4,
+        };
+      },
+    },
+  });
+  assert.equal(await store.getActiveInterview("project", "owner"), null);
+  assert.deepEqual(lookup.where, { projectId: "project", userId: "owner" });
+  assert.deepEqual(lookup.orderBy, { startedAt: "desc" });
+});
+
 function fixture() {
   const interviews = [];
   const answers = [];

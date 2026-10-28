@@ -1,0 +1,55 @@
+{
+  "verifiedOn": "2026-10-28",
+  "status": "local-verified",
+  "baseCommit": "e64d5cd7528c9b94f7aa61880cc1032fc253a6e5",
+  "includesUncommittedChanges": true,
+  "deployed": false,
+  "checks": {
+    "api": { "passed": 69, "failed": 0 },
+    "web": { "passed": 19, "failed": 0 },
+    "postgresql": {
+      "businessScenarios": 11,
+      "nodeTestsIncludingParent": 12,
+      "failed": 0
+    },
+    "http": {
+      "businessScenarios": 8,
+      "nodeTestsIncludingParent": 9,
+      "failed": 0
+    },
+    "rubricFixtures": { "passed": 20, "modelCalls": 0, "humanReviewed": 0 },
+    "browser": {
+      "frontend": "production Next.js build",
+      "api": "isolated fixed fixtures",
+      "engine": "installed Microsoft Edge / Chromium",
+      "groups": [
+        "training-workbench",
+        "interview-review",
+        "capability-report",
+        "session-recovery",
+        "training-experience",
+        "session-summary"
+      ],
+      "desktopWidths": [1440, 1600],
+      "mobileWidth": 390,
+      "uncaughtExceptions": 0,
+      "passed": true
+    },
+    "lint": "passed",
+    "typescript": "passed",
+    "productionBuild": "passed",
+    "diffWhitespace": "passed"
+  },
+  "database": {
+    "kind": "temporary local PostgreSQL",
+    "isolatedSchemasRemoved": true,
+    "serverStopped": true
+  },
+  "ci": { "browserStepConfigured": true, "remoteRunForThisUpgrade": false },
+  "limits": {
+    "liveProviderRevalidation": false,
+    "dockerBuildRevalidation": false,
+    "productionLoadTest": false,
+    "humanCalibratedScoring": false
+  }
+}

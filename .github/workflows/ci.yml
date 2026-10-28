@@ -49,7 +49,7 @@ jobs:
         run: npm run lint
       - name: Test API
         run: npm run test:api
-      - name: Test browser HTTP response boundaries
+      - name: Test web state and HTTP boundaries
         run: npm run test:web
       - name: Validate rubric evaluation fixtures
         run: npm run eval:rubric
@@ -63,3 +63,16 @@ jobs:
           TEST_DATABASE_URL: postgresql://repocoach:repocoach@localhost:5432/repocoach?schema=public
       - name: Build production bundles
         run: npm run build
+      - name: Test production UI in Chromium
+        run: npm run test:browser
+      - name: Upload browser acceptance artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-acceptance
+          path: |
+            data/browser-acceptance-*/*.png
+            data/browser-acceptance-*/*checks.json
+            data/browser-acceptance-*/app-preview-server.log
+          if-no-files-found: ignore
+          retention-days: 7

@@ -7,5 +7,6 @@ coverage
 .env.local
 .DS_Store
 *.log
+*.tsbuildinfo
 data/
 apps/api/data/

@@ -82,7 +82,9 @@ export class ReportStore {
         totalQuestions: interview.totalQuestions,
         questions: interview.questions,
         projectContext: interview.projectContext,
-        ...(interview.practiceFocus ? { practiceFocus: interview.practiceFocus as Prisma.InputJsonValue } : {}),
+        ...(interview.practiceFocus
+          ? { practiceFocus: interview.practiceFocus as Prisma.InputJsonValue }
+          : {}),
       },
     });
   }
@@ -105,7 +107,8 @@ export class ReportStore {
 
   async getActiveInterview(projectId: string, userId: string) {
     const interview = await this.prisma.interview.findFirst({
-      where: { projectId, userId, status: InterviewStatus.IN_PROGRESS },
+      // A completed latest interview must not resurrect an older abandoned one.
+      where: { projectId, userId },
       orderBy: { startedAt: "desc" },
       select: {
         id: true,
@@ -114,9 +117,15 @@ export class ReportStore {
         totalQuestions: true,
         questions: true,
         practiceFocus: true,
+        status: true,
       },
     });
-    if (!interview || !Array.isArray(interview.questions)) return null;
+    if (
+      !interview ||
+      interview.status !== InterviewStatus.IN_PROGRESS ||
+      !Array.isArray(interview.questions)
+    )
+      return null;
     const question = interview.questions[interview.currentQuestion];
     if (!question || typeof question !== "object") return null;
     return {
@@ -366,7 +375,10 @@ export class ReportStore {
   async getInterviewDetail(interviewId: string, userId: string) {
     const interview = await this.prisma.interview.findFirst({
       where: { id: interviewId, userId },
-      include: { answers: { orderBy: { questionNumber: "asc" } }, evaluationRuns: { select: { id: true, questionId: true } } },
+      include: {
+        answers: { orderBy: { questionNumber: "asc" } },
+        evaluationRuns: { select: { id: true, questionId: true } },
+      },
     });
     if (!interview) throw new NotFoundException("找不到这次面试记录。");
 
@@ -405,7 +417,9 @@ export class ReportStore {
       startedAt: interview.startedAt.toISOString(),
       completedAt: interview.completedAt?.toISOString() ?? null,
       answers: interview.answers.map((answer) => ({
-        runId: interview.evaluationRuns?.find(run => run.questionId === answer.questionId)?.id,
+        runId: interview.evaluationRuns?.find(
+          (run) => run.questionId === answer.questionId,
+        )?.id,
         questionNumber: answer.questionNumber,
         question: answer.questionPrompt,
         contextPath: answer.contextPath,

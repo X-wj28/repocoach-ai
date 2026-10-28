@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/X-wj28/repocoach-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/X-wj28/repocoach-ai/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/license-MIT-0f766e)](LICENSE) [![Node](https://img.shields.io/badge/node-22-339933)](https://nodejs.org/)
 
-面向前端实习生的 GitHub 项目深挖与 AI 技术面试训练工具。
+面向前端实习生的代码证据驱动面试 Agent，提供可观察、可恢复的训练工作台。
 
 RepoCoach FE 会读取公开的 React/Next.js 仓库和目标岗位 JD，围绕真实代码生成项目面试题，评价回答，并持续沉淀个人能力报告。项目支持 DeepSeek 真实模型，也提供无需模型密钥的本地兜底模式。
 
@@ -29,23 +29,27 @@ RepoCoach FE 会读取公开的 React/Next.js 仓库和目标岗位 JD，围绕�
 - 完整账号体系：邮箱注册登录、`HttpOnly` Cookie 会话和用户数据隔离
 - 训练记录：保存每次问答、评分、优点和改进建议，支持回放与 Markdown 导出
 - 能力报告：按 React、Next.js、工程化和性能意识聚合真实训练信号
+- 可视化训练闭环：宽回答区、五阶段进度、工具与源码侧栏、逐题复盘、训练小结及下一次练习
+- 输入与恢复：账号和题目隔离草稿、回答提纲、快捷提交、清空确认；失败可重试，迟到请求不覆盖新工作区
 - 工程化交付：Prisma 迁移、PostgreSQL、Docker Compose 和 GitHub Actions CI
 
 ## 产品界面
 
-| 项目深挖面试                                        | 能力报告                                       |
-| --------------------------------------------------- | ---------------------------------------------- |
-| ![项目深挖面试](docs/assets/interview-training.png) | ![能力报告](docs/assets/capability-report.png) |
+新版[可视化训练工作台、逐题复盘与交互式能力报告](docs/visual-workbench.md)扩大回答区，以阶段条展示持久化任务进度；工具事件和评分引用可以打开源码。报告支持维度选择、最近训练曲线及练习建议直达原题。草稿支持刷新恢复，失败有重试入口，迟到请求不会覆盖新项目。2026-10-28 已完成[本地验收](docs/demo-readiness.md)，本轮 CI 与 Render 发布状态见[发布记录](docs/releases/2026-10-28.md)。
 
-![仓库分析与项目设置](docs/assets/project-settings.png)
+追加的[训练体验升级](docs/training-experience.md)提供回答提纲、Ctrl/⌘ + Enter 提交、复制与清空确认，以及训练计划加载、重试、清除计数和过期请求隔离。
 
-![四项Rubric与源码依据（本地新版）](docs/assets/rubric-feedback.png)
+新增[本次训练小结](docs/session-summary.md)：结束后回看本次统计和逐题结果，区分低分建议与证据缺口，再进入源码复盘、完整导出或下一次训练。
 
-![可追溯训练计划（本地新版）](docs/assets/training-memory.png)
+![新版 Agent 训练工作台（本地固定验收数据）](docs/assets/workbench-feedback-v2.png)
+
+![新版交互式能力报告（本地固定验收数据）](docs/assets/capability-insights-v2.png)
+
+![本次训练小结（本地固定验收数据）](docs/assets/session-summary-desktop-v4.png)
 
 面试问题、评价和报告由实际 API 返回。规则演示反馈不计入能力评分。截图可用于快速了解主要用户流程。
 
-Agent 工程能力的分阶段升级见 [升级路线](docs/agent-upgrade-roadmap.md)，状态机与评测基线见 [评分与恢复说明](docs/rubric-and-recovery.md)，实时进度与练习计划见 [事件与记忆](docs/events-and-memory.md)，实际验证见 [验收记录](docs/agent-acceptance.md)。八分钟演示流程、故障演示和检查命令见 [演示手册](docs/demo-guide.md)。四阶段升级已于2026-10-14发布到上述线上环境，完成真实四题、SSE补发、浏览器登录、复盘导出和记忆清除验收；使用Render免费Web/API与Neon数据库。
+Agent 工程能力的分阶段升级见 [升级路线](docs/agent-upgrade-roadmap.md)，状态机与评测基线见 [评分与恢复说明](docs/rubric-and-recovery.md)，实时进度与练习计划见 [事件与记忆](docs/events-and-memory.md)。八分钟流程和故障演示见 [演示手册](docs/demo-guide.md)。使用 Render 免费 Web/API 与现有 Neon 数据库；历史真实模型验证见[验收记录](docs/agent-acceptance.md)，最新版本状态以[本轮发布记录](docs/releases/2026-10-28.md)为准。
 
 ## 简历与面试材料
 
@@ -78,7 +82,7 @@ docs/        产品和架构文档
 
 ## 本地开发
 
-需要 Node.js 22+、npm 10+ 和 Docker Desktop。
+需要 Node.js 22+、npm 10+ 和 PostgreSQL。可使用 Docker Desktop 启动下方数据库，也可配置已有本地 PostgreSQL。
 
 1. 从 `.env.example` 复制一份 `.env`。
 2. 启动 PostgreSQL 并应用迁移。
@@ -117,19 +121,19 @@ docker compose down
 
 ## 环境变量
 
-| 变量                  | 用途                           | 默认值                         |
-| --------------------- | ------------------------------ | ------------------------------ |
-| `NEXT_PUBLIC_API_URL` | 浏览器访问 API 的地址          | `http://localhost:4000/api/v1` |
-| `WEB_ORIGIN`          | API 允许跨域访问的前端地址     | `http://localhost:3002`        |
-| `DATABASE_URL`        | 本机开发数据库连接             | PostgreSQL 本地容器            |
-| `DOCKER_DATABASE_URL` | API 容器访问数据库的连接       | Compose 内部 PostgreSQL        |
-| `DEEPSEEK_API_KEY`    | 启用真实 DeepSeek Agent        | 未配置时使用本地兜底           |
-| `DEEPSEEK_TIMEOUT_MS` | 模型请求超时；配置模型的故障进入阶段失败 | `20000`                   |
-| `GITHUB_TOKEN`        | 提高 GitHub API 请求额度       | 可选                           |
-| `COOKIE_SECURE`       | HTTPS 部署时启用 Secure Cookie | 本地 `false`                   |
-| `EMAIL_VERIFICATION_REQUIRED` | 注册是否必须完成邮箱验证码 | 本地 `false`，生产建议 `true` |
-| `RESEND_API_KEY`       | Resend HTTPS 发信 API Key       | 生产必填（开启验证时）          |
-| `EMAIL_FROM`           | Resend 已验证的发件人           | 测试可用 `RepoCoach <onboarding@resend.dev>` |
+| 变量                          | 用途                                     | 默认值                                       |
+| ----------------------------- | ---------------------------------------- | -------------------------------------------- |
+| `NEXT_PUBLIC_API_URL`         | 浏览器访问 API 的地址                    | `http://localhost:4000/api/v1`               |
+| `WEB_ORIGIN`                  | API 允许跨域访问的前端地址               | `http://localhost:3002`                      |
+| `DATABASE_URL`                | 本机开发数据库连接                       | PostgreSQL 本地容器                          |
+| `DOCKER_DATABASE_URL`         | API 容器访问数据库的连接                 | Compose 内部 PostgreSQL                      |
+| `DEEPSEEK_API_KEY`            | 启用真实 DeepSeek Agent                  | 未配置时使用本地兜底                         |
+| `DEEPSEEK_TIMEOUT_MS`         | 模型请求超时；配置模型的故障进入阶段失败 | `20000`                                      |
+| `GITHUB_TOKEN`                | 提高 GitHub API 请求额度                 | 可选                                         |
+| `COOKIE_SECURE`               | HTTPS 部署时启用 Secure Cookie           | 本地 `false`                                 |
+| `EMAIL_VERIFICATION_REQUIRED` | 注册是否必须完成邮箱验证码               | 本地 `false`，生产建议 `true`                |
+| `RESEND_API_KEY`              | Resend HTTPS 发信 API Key                | 生产必填（开启验证时）                       |
+| `EMAIL_FROM`                  | Resend 已验证的发件人                    | 测试可用 `RepoCoach <onboarding@resend.dev>` |
 
 不要提交 `.env`、GitHub Token 或模型 API Key。
 
@@ -140,7 +144,8 @@ npm run dev             # 启动本地开发环境
 npm run build           # 构建前端和 API
 npm run lint            # 检查前端代码
 npm run test:api        # 构建并执行 API 单元测试
-npm run test:web        # 前端 HTTP 响应体超时与错误处理
+npm run test:web        # 前端 HTTP、草稿隔离、阶段映射与报告边界
+npm run test:browser    # 生产界面验收，先 build，需要已有 Chrome/Edge
 npm run test:integration # 真实 PostgreSQL 测试，需显式设置 TEST_DATABASE_URL
 npm run test:e2e        # 完整 NestJS HTTP 流程，随机测试 schema，不调用外部服务
 npm run eval:rubric      # 校验20条合成样例，不调用模型
@@ -160,15 +165,19 @@ npm run db:import-sqlite # 导入旧 SQLite 数据，可重复执行
 
 ## CI
 
-每次推送到 `main` 或创建 Pull Request 时，GitHub Actions 会执行：
+推送到 `main`、`codex/**` 或向 `main` 创建 Pull Request 时，GitHub Actions 会执行：
 
 1. `npm ci`
 2. Prisma Client 生成
 3. 前端 lint
 4. API 自动化测试
-5. PostgreSQL 迁移与阶段恢复集成测试
-6. 合成 Rubric 样例结构校验（不调用模型）
-7. 前后端生产构建
+5. 前端 HTTP、草稿、阶段映射与报告边界测试
+6. PostgreSQL 迁移、事务与完整 HTTP 恢复流程
+7. 合成 Rubric 样例结构校验（不调用模型）
+8. 前后端生产构建
+9. Chromium 生产界面验收；失败保存截图和检查结果
+
+本轮配置已加入浏览器验收，本地结果见[求职演示版本地验收](docs/demo-readiness.md)。尚未推送运行新版远端 CI。
 
 ## 当前范围
 
