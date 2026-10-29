@@ -2,7 +2,7 @@
 
 For recovery from an expired Render database without a paid upgrade, see [the Neon recovery steps](neon-recovery.md).
 
-The current deployment uses Render for the frontend and API, and Neon for PostgreSQL after the database recovery. Keep the existing Neon `DATABASE_URL` when updating the API; a code upgrade does not require creating a new database. The visual workbench release was deployed on 2026-10-28 at commit `f0287a7d86a767526996d31ddf2114dc24bf7a46`; both existing free services are Live, with the same Neon database and eight existing migrations. No new migration was added. See [the current release results](releases/2026-10-28.md). The creation instructions below also document setup for a fresh deployment; an update uses the existing services.
+The current deployment uses the existing free Render frontend and API services, with Neon for PostgreSQL. On 2026-10-29 both services were redeployed from main at commit `3a45954178b769336ccccd64b1f050efd8d8ebcf`; health and HTML revision markers match. Application source is unchanged from the verified v0.2.0 release. Keep the existing Neon `DATABASE_URL`, environment variables and eight migrations when updating. See [the latest deployment verification](releases/2026-10-29.md) and [the v0.2.0 feature release](releases/2026-10-28.md). The setup instructions below apply to a fresh deployment; updates use the existing services.
 
 ## Deployment layout
 
@@ -46,19 +46,19 @@ If choosing a different PostgreSQL provider later, use that provider's supported
 6. Set health-check path to `/api/v1/health`.
 7. Add these environment variables:
 
-| Key                 | Value                                                   |
-| ------------------- | ------------------------------------------------------- |
-| `DATABASE_URL`      | Existing Neon direct PostgreSQL URL with SSL parameters |
-| `WEB_ORIGIN`        | Temporary placeholder; replace after the web service is deployed |
-| `COOKIE_SECURE`     | `true`                                                  |
-| `COOKIE_SAME_SITE`  | `none`                                                  |
-| `DEEPSEEK_API_KEY`  | Your DeepSeek key, optional                             |
-| `DEEPSEEK_MODEL`    | `deepseek-chat`                                         |
-| `DEEPSEEK_BASE_URL` | `https://api.deepseek.com`                              |
-| `GITHUB_TOKEN`      | Dedicated public-repository read-only GitHub token; configured in the current deployment to avoid exhausted anonymous limits |
-| `EMAIL_VERIFICATION_REQUIRED` | `true` to require Gmail code verification        |
-| `RESEND_API_KEY`     | Resend HTTPS API key                                  |
-| `EMAIL_FROM`         | Resend-verified sender, or `RepoCoach <onboarding@resend.dev>` for testing |
+| Key                           | Value                                                                                                                        |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                | Existing Neon direct PostgreSQL URL with SSL parameters                                                                      |
+| `WEB_ORIGIN`                  | Temporary placeholder; replace after the web service is deployed                                                             |
+| `COOKIE_SECURE`               | `true`                                                                                                                       |
+| `COOKIE_SAME_SITE`            | `none`                                                                                                                       |
+| `DEEPSEEK_API_KEY`            | Your DeepSeek key, optional                                                                                                  |
+| `DEEPSEEK_MODEL`              | `deepseek-chat`                                                                                                              |
+| `DEEPSEEK_BASE_URL`           | `https://api.deepseek.com`                                                                                                   |
+| `GITHUB_TOKEN`                | Dedicated public-repository read-only GitHub token; configured in the current deployment to avoid exhausted anonymous limits |
+| `EMAIL_VERIFICATION_REQUIRED` | `true` to require Gmail code verification                                                                                    |
+| `RESEND_API_KEY`              | Resend HTTPS API key                                                                                                         |
+| `EMAIL_FROM`                  | Resend-verified sender, or `RepoCoach <onboarding@resend.dev>` for testing                                                   |
 
 Render provides a `PORT` value at runtime. The API Dockerfile uses it automatically. On the first boot, the container runs `prisma migrate deploy` before starting NestJS.
 
@@ -79,8 +79,8 @@ It should return a JSON object with `status: "ok"`, `agentContract: "durable-rub
 5. Set the start command to `npm exec --workspace apps/web -- next start -p $PORT`.
 6. Add one production environment variable:
 
-| Key                   | Value                                             |
-| --------------------- | ------------------------------------------------- |
+| Key                   | Value                                         |
+| --------------------- | --------------------------------------------- |
 | `NEXT_PUBLIC_API_URL` | `https://YOUR-RENDER-API.onrender.com/api/v1` |
 
 7. Deploy. Render will provide a URL similar to `https://repocoach-web.onrender.com`.
@@ -130,13 +130,13 @@ Tasks record the Rubric, prompt version and configured model alias. This release
 
 Check the affected service's suspension notice and Events first, then check workspace **Billing → Monthly Included Usage**. A suspended service is different from an idle service: refreshing the page or redeploying code does not necessarily restore it.
 
-| Confirmed reason | Recovery action |
-| --- | --- |
-| Free instance hours exhausted | Wait for the next calendar month's reset, or explicitly choose a paid compute plan. The workspace shares 750 free instance hours across its free web services. |
-| Outbound bandwidth exhausted without a payment method | Check the workspace's usage and billing notice; resolve the stated billing limit or wait for the next billing period. |
-| High service-initiated traffic | Follow Render's suspension notice. Render documents moving the affected service to a paid compute plan as the recovery path. |
-| Maintenance redeploy failed | Read the failed deploy logs and fix the build/start error identified there before redeploying. |
-| Reason not displayed | Check Render's notification email or ask Render support to identify the suspension reason. |
+| Confirmed reason                                      | Recovery action                                                                                                                                                |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Free instance hours exhausted                         | Wait for the next calendar month's reset, or explicitly choose a paid compute plan. The workspace shares 750 free instance hours across its free web services. |
+| Outbound bandwidth exhausted without a payment method | Check the workspace's usage and billing notice; resolve the stated billing limit or wait for the next billing period.                                          |
+| High service-initiated traffic                        | Follow Render's suspension notice. Render documents moving the affected service to a paid compute plan as the recovery path.                                   |
+| Maintenance redeploy failed                           | Read the failed deploy logs and fix the build/start error identified there before redeploying.                                                                 |
+| Reason not displayed                                  | Check Render's notification email or ask Render support to identify the suspension reason.                                                                     |
 
 After the API resumes, verify `/api/v1/health`, login, and a database-backed operation. A `200` response from the frontend alone does not verify the backend or database.
 

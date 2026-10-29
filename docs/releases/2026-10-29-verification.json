@@ -1,0 +1,97 @@
+{
+  "date": "2026-10-29",
+  "timezone": "Asia/Shanghai",
+  "runtimeRevision": "3a45954178b769336ccccd64b1f050efd8d8ebcf",
+  "applicationSourceRevision": "f0287a7d86a767526996d31ddf2114dc24bf7a46",
+  "applicationSourceCI": "https://github.com/X-wj28/repocoach-ai/actions/runs/40662290908",
+  "deployments": {
+    "api": {
+      "url": "https://repocoach-api.onrender.com",
+      "plan": "free",
+      "id": "dep-dbhf8ppsrm7s73fmm3p0",
+      "status": "live",
+      "revision": "3a45954178b769336ccccd64b1f050efd8d8ebcf",
+      "createdAt": "2026-10-29T07:23:19.70906Z",
+      "finishedAt": "2026-10-29T07:24:12.759432Z"
+    },
+    "web": {
+      "url": "https://repocoach-web.onrender.com",
+      "plan": "free",
+      "id": "dep-dbhfaflg1s2s739ugff0",
+      "status": "live",
+      "revision": "3a45954178b769336ccccd64b1f050efd8d8ebcf",
+      "createdAt": "2026-10-29T07:26:54.693061Z",
+      "finishedAt": "2026-10-29T07:28:41.711298Z"
+    }
+  },
+  "localChecks": {
+    "apiTests": 69,
+    "webTests": 19,
+    "postgresScenarios": 11,
+    "httpScenarios": 8,
+    "browserGroups": 6,
+    "offlineRubricFixtures": 20,
+    "lint": "passed",
+    "productionBuild": "passed",
+    "additionalModelCalls": 0,
+    "newMigrations": 0
+  },
+  "http": {
+    "date": "2026-10-29",
+    "timezone": "Asia/Shanghai",
+    "revision": "3a45954178b769336ccccd64b1f050efd8d8ebcf",
+    "checkedAt": "2026-10-29T07:30:52.304Z",
+    "api": 200,
+    "web": 200,
+    "matchingRuntimeRevision": true,
+    "login": true,
+    "crossOriginCookies": true,
+    "databaseBackedHistory": true,
+    "preservedCompletedAnswers": 4,
+    "capabilityReport": true,
+    "savedScorePreserved": true,
+    "eventReplay": true,
+    "crossAccountIsolation": true,
+    "trainingMemoryRead": true,
+    "additionalModelCalls": 0,
+    "emailDeliveryTested": false
+  },
+  "browser": {
+    "revision": "3a45954178b769336ccccd64b1f050efd8d8ebcf",
+    "browserLogin": true,
+    "crossOriginCookies": true,
+    "cookieRefresh": true,
+    "answerOutline": true,
+    "draftRefreshRecovery": true,
+    "capabilityReport": true,
+    "summaryAnswers": 4,
+    "summaryToExactReview": true,
+    "fourCriterionReview": true,
+    "threeDialogSourceStack": true,
+    "persistedEvents": true,
+    "markdownExportAllQuestions": true,
+    "mobileWidth": 390,
+    "mobileNoOverflow": true,
+    "mobileFooterVisible": true,
+    "sourceAndSummaryScreenshots": true,
+    "existingHistoryPreserved": true,
+    "trainingMemoryRead": true,
+    "additionalModelCalls": 0,
+    "acceptanceDraftRemoved": true,
+    "logout": true,
+    "uncaughtExceptions": 0,
+    "completedAt": "2026-10-29T07:31:14.810Z"
+  },
+  "configuration": {
+    "existingServicesPreserved": true,
+    "existingDatabaseConfigurationPreserved": true,
+    "environmentVariablesUnchanged": true,
+    "originalAutoDeployPreserved": true
+  },
+  "limitations": [
+    "This is a deployment refresh with no application source changes.",
+    "Real model generation was verified in the 2026-10-28 release; this refresh reads saved evaluations without new model calls.",
+    "Production email delivery was not exercised.",
+    "Synthetic rubric fixtures have no human calibration and do not establish scoring accuracy."
+  ]
+}

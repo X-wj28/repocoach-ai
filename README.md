@@ -13,6 +13,8 @@ RepoCoach FE 会读取公开的 React/Next.js 仓库和目标岗位 JD，围绕�
 
 首次访问免费实例可能需要等待几十秒唤醒。演示环境只允许读取公开 GitHub 仓库，不会修改仓库内容。
 
+2026-10-29 已重新部署并完成线上复核：前后端版本一致，登录、历史报告、SSE 补发及桌面/手机流程通过。检查范围与运行提交见 [最新部署记录](docs/releases/2026-10-29.md)。
+
 ## 核心能力
 
 - 公开 GitHub 仓库分析：识别技术栈、README、目录树和关键 TypeScript/TSX 文件
@@ -49,7 +51,7 @@ RepoCoach FE 会读取公开的 React/Next.js 仓库和目标岗位 JD，围绕�
 
 面试问题、评价和报告由实际 API 返回。规则演示反馈不计入能力评分。截图可用于快速了解主要用户流程。
 
-Agent 工程能力的分阶段升级见 [升级路线](docs/agent-upgrade-roadmap.md)，状态机与评测基线见 [评分与恢复说明](docs/rubric-and-recovery.md)，实时进度与练习计划见 [事件与记忆](docs/events-and-memory.md)。八分钟流程和故障演示见 [演示手册](docs/demo-guide.md)。使用 Render 免费 Web/API 与现有 Neon 数据库；历史真实模型验证见[验收记录](docs/agent-acceptance.md)，最新版本状态以[本轮发布记录](docs/releases/2026-10-28.md)为准。
+Agent 工程能力的分阶段升级见 [升级路线](docs/agent-upgrade-roadmap.md)，状态机与评测基线见 [评分与恢复说明](docs/rubric-and-recovery.md)，实时进度与练习计划见 [事件与记忆](docs/events-and-memory.md)。八分钟流程和故障演示见 [演示手册](docs/demo-guide.md)。使用 Render 免费 Web/API 与现有 Neon 数据库；历史真实模型验证见[验收记录](docs/agent-acceptance.md)，最新部署状态以[部署复核记录](docs/releases/2026-10-29.md)为准。
 
 ## 简历与面试材料
 
