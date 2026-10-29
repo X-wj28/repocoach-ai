@@ -15,6 +15,14 @@ RepoCoach FE 会读取公开的 React/Next.js 仓库和目标岗位 JD，围绕�
 
 2026-10-29 已重新部署并完成线上复核：前后端版本一致，登录、历史报告、SSE 补发及桌面/手机流程通过。检查范围与运行提交见 [最新部署记录](docs/releases/2026-10-29.md)。
 
+## Windows 桌面安装包
+
+[下载 RepoCoach 安装包](https://github.com/X-wj28/repocoach-ai/releases/download/desktop-v1.0.0/RepoCoach-Setup-1.0.0.exe) · [发布页与 SHA256 校验](https://github.com/X-wj28/repocoach-ai/releases/tag/desktop-v1.0.0)
+
+支持 Windows 10/11。安装后桌面和开始菜单会生成 **RepoCoach** 快捷方式，使用与网页一致的深青色星光图标。双击即可打开现有线上工作台，无需配置 Node.js、数据库或模型密钥，使用时需要联网。卸载可通过 Windows 设置中的应用列表完成。
+
+安装方式、运行要求和重新打包步骤见 [桌面版说明](docs/windows-desktop.md)。
+
 ## 核心能力
 
 - 公开 GitHub 仓库分析：识别技术栈、README、目录树和关键 TypeScript/TSX 文件

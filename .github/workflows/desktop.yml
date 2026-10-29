@@ -1,0 +1,62 @@
+name: Windows installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, "codex/**"]
+    paths:
+      - "apps/desktop/**"
+      - ".github/workflows/desktop.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/desktop/**"
+      - ".github/workflows/desktop.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and verify NSIS 3.13
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:RUNNER_TEMP 'nsis-3.13.zip'
+          Invoke-WebRequest 'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.13/nsis-3.13.zip' -OutFile $archive
+          $expected = 'ba63dffc4410ee89193e1cb5a41989991bd77c61068da17e3156d136b7b0b3d8'
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) {
+            throw 'NSIS download checksum mismatch.'
+          }
+          $tools = Join-Path $env:RUNNER_TEMP 'repocoach-tools'
+          Expand-Archive -LiteralPath $archive -DestinationPath $tools
+          "NSIS_MAKENSIS=$tools\nsis-3.13\Bin\makensis.exe" >> $env:GITHUB_ENV
+      - name: Build RepoCoach installer
+        shell: powershell
+        run: ./apps/desktop/build.ps1
+      - name: Test install, reinstall and uninstall
+        shell: powershell
+        run: ./apps/desktop/test-installer.ps1
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: RepoCoach-Windows-Installer
+          path: |
+            dist/desktop/RepoCoach-Setup-1.0.0.exe
+            dist/desktop/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload installer acceptance results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: RepoCoach-Windows-Acceptance
+          path: data/desktop-acceptance-*/checks.json
+          if-no-files-found: ignore
