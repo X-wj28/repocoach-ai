@@ -25,16 +25,29 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Download and verify NSIS 3.13
+      - name: Prepare NSIS compiler
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $archive = Join-Path $env:RUNNER_TEMP 'nsis-3.13.zip'
-          Invoke-WebRequest 'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.13/nsis-3.13.zip' -OutFile $archive
-          $expected = 'ba63dffc4410ee89193e1cb5a41989991bd77c61068da17e3156d136b7b0b3d8'
-          if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) {
-            throw 'NSIS download checksum mismatch.'
+          $preinstalled = Join-Path ${env:ProgramFiles(x86)} 'NSIS\makensis.exe'
+          if (Test-Path -LiteralPath $preinstalled) {
+            & $preinstalled /VERSION
+            "NSIS_MAKENSIS=$preinstalled" >> $env:GITHUB_ENV
+            exit 0
           }
+          $archive = Join-Path $env:RUNNER_TEMP 'nsis-3.13.zip'
+          $expected = 'ba63dffc4410ee89193e1cb5a41989991bd77c61068da17e3156d136b7b0b3d8'
+          $verified = $false
+          $mirrors = @('master', 'phoenixnap', 'netix')
+          foreach ($mirror in $mirrors) {
+            & curl.exe --location --fail --silent --show-error --connect-timeout 10 --max-time 60 --output $archive "https://$mirror.dl.sourceforge.net/project/nsis/NSIS%203/3.13/nsis-3.13.zip?viasf=1"
+            if ($LASTEXITCODE -eq 0 -and (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -eq $expected) {
+              $verified = $true
+              break
+            }
+            Write-Output "Mirror $mirror did not return the verified NSIS archive; trying the next official mirror."
+          }
+          if (-not $verified) { throw 'No mirror returned the verified NSIS archive.' }
           $tools = Join-Path $env:RUNNER_TEMP 'repocoach-tools'
           Expand-Archive -LiteralPath $archive -DestinationPath $tools
           "NSIS_MAKENSIS=$tools\nsis-3.13\Bin\makensis.exe" >> $env:GITHUB_ENV
