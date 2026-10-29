@@ -1,6 +1,8 @@
 const fs = require("node:fs");
 const http = require("node:http");
+const path = require("node:path");
 const { execFileSync } = require("node:child_process");
+const { setTimeout: delay } = require("node:timers/promises");
 
 function findBrowser() {
   const candidates = [process.env.BROWSER_EXECUTABLE];
@@ -49,4 +51,44 @@ async function freePort() {
   await new Promise((resolve) => server.close(resolve));
   return port;
 }
-module.exports = { findBrowser, freePort };
+async function waitForDevTools(browser, profile, timeoutMs = 30000) {
+  const portFile = path.join(profile, "DevToolsActivePort");
+  const deadline = Date.now() + timeoutMs;
+  let launchError;
+  const onError = (error) => {
+    launchError = error;
+  };
+  browser.on("error", onError);
+  try {
+    while (Date.now() < deadline) {
+      if (launchError)
+        throw new Error(`Browser could not start: ${launchError.message}`);
+      if (browser.exitCode !== null || browser.signalCode !== null)
+        throw new Error(
+          `Browser exited before DevTools was ready (exit ${browser.exitCode}, signal ${browser.signalCode}). Inspect browser-launch.log.`,
+        );
+      try {
+        const [port, endpoint] = fs
+          .readFileSync(portFile, "utf8")
+          .trim()
+          .split(/\r?\n/);
+        if (
+          /^\d+$/.test(port) &&
+          Number(port) > 0 &&
+          Number(port) <= 65535 &&
+          endpoint?.startsWith("/devtools/browser/")
+        )
+          return Number(port);
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+      }
+      await delay(100);
+    }
+    throw new Error(
+      `Browser did not expose DevTools within ${timeoutMs} ms. Inspect browser-launch.log.`,
+    );
+  } finally {
+    browser.off("error", onError);
+  }
+}
+module.exports = { findBrowser, freePort, waitForDevTools };

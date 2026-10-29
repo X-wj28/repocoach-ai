@@ -8,7 +8,7 @@ const root = path.resolve(__dirname, "../../../..");
 const directory = path.join(root, "data", "browser-acceptance-" + randomUUID());
 fs.mkdirSync(directory, { recursive: true });
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const { findBrowser, freePort } = require("./runtime.cjs");
+const { findBrowser, freePort, waitForDevTools } = require("./runtime.cjs");
 let appOrigin, apiOrigin;
 const project = {
   id: "workbench-fixture",
@@ -647,12 +647,18 @@ async function main() {
     appReady,
     "Production frontend did not start; inspect app-preview-server.log.",
   );
+  const browserLog = fs.openSync(
+    path.join(directory, "browser-launch.log"),
+    "w",
+  );
   browser = spawn(
     browserExecutable,
     [
       "--headless=new",
       "--disable-gpu",
-      ...(process.platform !== "win32" && process.getuid?.() === 0
+      "--disable-extensions",
+      ...(process.platform === "linux" &&
+      (process.getuid?.() === 0 || process.env.BROWSER_NO_SANDBOX === "true")
         ? ["--no-sandbox"]
         : []),
       "--remote-debugging-port=0",
@@ -661,14 +667,13 @@ async function main() {
       "--no-default-browser-check",
       "about:blank",
     ],
-    { windowsHide: true, stdio: "ignore" },
+    { windowsHide: true, stdio: ["ignore", browserLog, browserLog] },
   );
+  fs.closeSync(browserLog);
   browser.on("error", (error) => {
     console.error(error.message);
   });
-  const portFile = path.join(profile, "DevToolsActivePort");
-  for (let i = 0; i < 40 && !fs.existsSync(portFile); i++) await delay(250);
-  const port = Number(fs.readFileSync(portFile, "utf8").split("\n")[0]);
+  const port = await waitForDevTools(browser, profile);
   const target = (
     await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()
   ).find((item) => item.type === "page");

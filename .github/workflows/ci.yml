@@ -65,6 +65,10 @@ jobs:
         run: npm run build
       - name: Test production UI in Chromium
         run: npm run test:browser
+        env:
+          # This disposable runner tests only the local frontend and fixture API.
+          # Ubuntu AppArmor/user-namespace restrictions can prevent Chrome startup.
+          BROWSER_NO_SANDBOX: "true"
       - name: Upload browser acceptance artifacts
         if: failure()
         uses: actions/upload-artifact@v4
@@ -74,5 +78,6 @@ jobs:
             data/browser-acceptance-*/*.png
             data/browser-acceptance-*/*checks.json
             data/browser-acceptance-*/app-preview-server.log
+            data/browser-acceptance-*/browser-launch.log
           if-no-files-found: ignore
           retention-days: 7
