@@ -13,7 +13,7 @@ RepoCoach FE 会读取公开的 React/Next.js 仓库和目标岗位 JD，围绕�
 
 首次访问免费实例可能需要等待几十秒唤醒。演示环境只允许读取公开 GitHub 仓库，不会修改仓库内容。
 
-2026-10-29 已重新部署并完成线上复核：前后端版本一致，登录、历史报告、SSE 补发及桌面/手机流程通过。检查范围与运行提交见 [最新部署记录](docs/releases/2026-10-29.md)。
+2026-11-02 已发布浅色界面与训练体验升级：2 题短练、训练重点、带源码依据的参考答案、回答对照与复述练习。GitHub CI、Render 前后端部署及桌面/手机线上复核通过，见 [最新发布记录](docs/releases/2026-11-02.md)。
 
 ## Windows 桌面安装包
 
@@ -45,21 +45,23 @@ RepoCoach FE 会读取公开的 React/Next.js 仓库和目标岗位 JD，围绕�
 
 ## 产品界面
 
+浅色界面统一登录、导航、训练和报告，移动端收起侧栏。训练体验新增参考答案、回答对照和复述练习，详见[参考答案与保存说明](docs/reference-answers.md)。
+
 新版[可视化训练工作台、逐题复盘与交互式能力报告](docs/visual-workbench.md)扩大回答区，以阶段条展示持久化任务进度；工具事件和评分引用可以打开源码。报告支持维度选择、最近训练曲线及练习建议直达原题。草稿支持刷新恢复，失败有重试入口，迟到请求不会覆盖新项目。2026-10-28 已通过 GitHub CI 并部署到 Render，本轮提交和线上验证见[发布记录](docs/releases/2026-10-28.md)。
 
 追加的[训练体验升级](docs/training-experience.md)提供回答提纲、Ctrl/⌘ + Enter 提交、复制与清空确认，以及训练计划加载、重试、清除计数和过期请求隔离。
 
 新增[本次训练小结](docs/session-summary.md)：结束后回看本次统计和逐题结果，区分低分建议与证据缺口，再进入源码复盘、完整导出或下一次训练。
 
-![新版 Agent 训练工作台（本地固定验收数据）](docs/assets/workbench-feedback-v2.png)
+![浅色项目训练工作台（本地固定验收数据）](docs/assets/workbench-soft-20261102.png)
 
-![新版交互式能力报告（本地固定验收数据）](docs/assets/capability-insights-v2.png)
+![浅色交互式能力报告（本地固定验收数据）](docs/assets/report-soft-20261102.png)
 
 ![本次训练小结（本地固定验收数据）](docs/assets/session-summary-desktop-v4.png)
 
 面试问题、评价和报告由实际 API 返回。规则演示反馈不计入能力评分。截图可用于快速了解主要用户流程。
 
-Agent 工程能力的分阶段升级见 [升级路线](docs/agent-upgrade-roadmap.md)，状态机与评测基线见 [评分与恢复说明](docs/rubric-and-recovery.md)，实时进度与练习计划见 [事件与记忆](docs/events-and-memory.md)。八分钟流程和故障演示见 [演示手册](docs/demo-guide.md)。使用 Render 免费 Web/API 与现有 Neon 数据库；历史真实模型验证见[验收记录](docs/agent-acceptance.md)，最新部署状态以[部署复核记录](docs/releases/2026-10-29.md)为准。
+Agent 工程能力的分阶段升级见 [升级路线](docs/agent-upgrade-roadmap.md)，状态机与评测基线见 [评分与恢复说明](docs/rubric-and-recovery.md)，实时进度与练习计划见 [事件与记忆](docs/events-and-memory.md)。八分钟流程和故障演示见 [演示手册](docs/demo-guide.md)。使用 Render 免费 Web/API 与现有 Neon 数据库；历史真实模型验证见[验收记录](docs/agent-acceptance.md)，最新部署状态以[发布与部署记录](docs/releases/2026-11-02.md)为准。
 
 ## 简历与面试材料
 

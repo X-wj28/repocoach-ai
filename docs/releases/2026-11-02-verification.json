@@ -1,0 +1,103 @@
+{
+  "date": "2026-11-02",
+  "timezone": "Asia/Shanghai",
+  "runtimeRevision": "192ebad10a419991343ac4e4240ccb086e61e5e2",
+  "ci": {
+    "id": 41444025633,
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/X-wj28/repocoach-ai/actions/runs/41444025633",
+    "revision": "192ebad10a419991343ac4e4240ccb086e61e5e2"
+  },
+  "deployments": {
+    "api": {
+      "url": "https://repocoach-api.onrender.com",
+      "plan": "free",
+      "id": "dep-dbk81vgu01pc739amc40",
+      "status": "live",
+      "revision": "192ebad10a419991343ac4e4240ccb086e61e5e2",
+      "createdAt": "2026-11-02T12:24:30.09002Z",
+      "finishedAt": "2026-11-02T12:26:39.053141Z"
+    },
+    "web": {
+      "url": "https://repocoach-web.onrender.com",
+      "plan": "free",
+      "id": "dep-dbk832nf3r2c738vs880",
+      "status": "live",
+      "revision": "192ebad10a419991343ac4e4240ccb086e61e5e2",
+      "createdAt": "2026-11-02T12:26:50.964868Z",
+      "finishedAt": "2026-11-02T12:28:40.045016Z"
+    }
+  },
+  "localChecks": {
+    "apiTopLevelTests": 73,
+    "apiIncludingSubtests": 76,
+    "webTests": 22,
+    "postgresScenarios": 11,
+    "postgresIncludingOuter": 12,
+    "httpScenarios": 9,
+    "httpIncludingOuter": 10,
+    "offlineRubricFixtures": 20,
+    "lint": "passed",
+    "productionBuilds": "passed",
+    "productionBrowserAcceptance": "passed"
+  },
+  "http": {
+    "date": "2026-11-02",
+    "timezone": "Asia/Shanghai",
+    "revision": "192ebad10a419991343ac4e4240ccb086e61e5e2",
+    "checkedAt": "2026-11-02T12:30:07.892Z",
+    "api": 200,
+    "web": 200,
+    "matchingRuntimeRevision": true,
+    "login": true,
+    "crossOriginCookies": true,
+    "databaseBackedHistory": true,
+    "preservedCompletedAnswers": 4,
+    "capabilityReport": true,
+    "savedScorePreserved": true,
+    "eventReplay": true,
+    "crossAccountIsolation": true,
+    "trainingMemoryRead": true,
+    "additionalModelCalls": 0,
+    "emailDeliveryTested": false
+  },
+  "browser": {
+    "revision": "192ebad10a419991343ac4e4240ccb086e61e5e2",
+    "browserLogin": true,
+    "crossOriginCookies": true,
+    "cookieRefresh": true,
+    "answerOutline": true,
+    "draftRefreshRecovery": true,
+    "capabilityReport": true,
+    "summaryAnswers": 4,
+    "summaryToExactReview": true,
+    "fourCriterionReview": true,
+    "threeDialogSourceStack": true,
+    "persistedEvents": true,
+    "markdownExportAllQuestions": true,
+    "mobileWidth": 390,
+    "mobileNoOverflow": true,
+    "mobileFooterVisible": true,
+    "sourceAndSummaryScreenshots": true,
+    "existingHistoryPreserved": true,
+    "trainingMemoryRead": true,
+    "additionalModelCalls": 0,
+    "acceptanceDraftRemoved": true,
+    "logout": true,
+    "uncaughtExceptions": 0,
+    "completedAt": "2026-11-02T12:30:08.926Z"
+  },
+  "configuration": {
+    "existingFreeServicesPreserved": true,
+    "existingDatabasePreserved": true,
+    "newMigrations": 0,
+    "environmentVariablesUnchanged": true,
+    "originalAutoDeployRestored": true
+  },
+  "limitations": [
+    "New reference-answer generation was validated with fixed model outputs in isolated local tests and CI, not by new production model calls.",
+    "Production checks read saved evaluations and exercise login, browser flows and SSE replay.",
+    "Production email delivery was not exercised."
+  ]
+}

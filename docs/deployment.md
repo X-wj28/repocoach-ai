@@ -2,7 +2,7 @@
 
 For recovery from an expired Render database without a paid upgrade, see [the Neon recovery steps](neon-recovery.md).
 
-The current deployment uses the existing free Render frontend and API services, with Neon for PostgreSQL. On 2026-10-29 both services were redeployed from main at commit `3a45954178b769336ccccd64b1f050efd8d8ebcf`; health and HTML revision markers match. Application source is unchanged from the verified v0.2.0 release. Keep the existing Neon `DATABASE_URL`, environment variables and eight migrations when updating. See [the latest deployment verification](releases/2026-10-29.md) and [the v0.2.0 feature release](releases/2026-10-28.md). The setup instructions below apply to a fresh deployment; updates use the existing services.
+The current deployment uses the existing free Render frontend and API services, with Neon for PostgreSQL. On 2026-11-02 both services were deployed from main at commit `192ebad10a419991343ac4e4240ccb086e61e5e2`; health and HTML revision markers match. This release adds the light visual theme, short practice, training preferences, saved reference answers and answer rehearsal. Keep the existing Neon `DATABASE_URL`, environment variables and eight migrations. No new migration is needed. See [the latest release and deployment verification](releases/2026-11-02.md). The setup instructions below apply to a fresh deployment; updates use the existing services.
 
 ## Deployment layout
 
