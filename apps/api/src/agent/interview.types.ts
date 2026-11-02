@@ -34,6 +34,7 @@ export type InterviewEvaluation = {
   score: number | null;
   strengths: string[];
   improvements: string[];
+  referenceAnswer?: { content: string; evidenceIds: string[] };
   nextQuestion?: Question;
   questionNumber: number;
   totalQuestions: number;

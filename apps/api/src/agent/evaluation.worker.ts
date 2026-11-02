@@ -99,7 +99,9 @@ export class EvaluationWorker
     try {
       if (
         run.rubricVersion !== RUBRIC_VERSION ||
-        run.promptVersion !== SCORING_PROMPT_VERSION
+        // Pending runs from before reference answers were added can still resume.
+        (run.promptVersion !== SCORING_PROMPT_VERSION &&
+          run.promptVersion !== "rubric-grader-v2")
       )
         throw new ScoringFailure("VERSION_UNSUPPORTED");
       const project = restoreProjectContext(run.projectContext);
@@ -230,6 +232,7 @@ export class EvaluationWorker
               : "context-planner"
             : "none",
           rubric: graded.rubric,
+          referenceAnswer: graded.referenceAnswer,
           evidence,
           scoring: { ...graded.scoring, attempt: run.scoringAttempts },
           ...(run.trace

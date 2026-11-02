@@ -51,6 +51,10 @@ export class AgentService {
     jobDescription: string,
     projectUrl: string | undefined,
     userId: string,
+    preferences: {
+      questionCount?: 2 | 4;
+      focusDimension?: Question["dimension"];
+    } = {},
   ) {
     let projectContext = await this.githubService.getProjectContext(projectId);
     if (!projectContext && projectUrl) {
@@ -64,7 +68,32 @@ export class AgentService {
     if (!projectContext)
       throw new BadRequestException("请先导入并分析一个公开 GitHub 仓库。");
     const practice = await this.memory?.get(projectId, userId);
-    const { questions, focus: practiceFocus } = applyPracticeFocus(planInterviewQuestions(projectContext), practice?.focus ?? []);
+    const planned = applyPracticeFocus(
+      planInterviewQuestions(projectContext),
+      practice?.focus ?? [],
+    );
+    const preferred = preferences.focusDimension
+      ? planned.questions.find(
+          (question) => question.dimension === preferences.focusDimension,
+        )
+      : undefined;
+    if (preferences.focusDimension && !preferred)
+      throw new BadRequestException(
+        "已读取的项目代码未覆盖所选重点，请选择综合训练或其他重点。",
+      );
+    const questions = (
+      preferred
+        ? [
+            preferred,
+            ...planned.questions.filter(
+              (question) => question.id !== preferred.id,
+            ),
+          ]
+        : planned.questions
+    ).slice(0, preferences.questionCount ?? 4);
+    const practiceFocus = planned.focus.filter((focus) =>
+      questions.some((question) => question.dimension === focus.dimension),
+    );
     if (!questions.length)
       throw new BadRequestException(
         "没有读取到可用于提问的项目文件，请重新分析仓库。",

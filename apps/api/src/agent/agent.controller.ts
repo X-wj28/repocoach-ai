@@ -18,6 +18,7 @@ import {
   IsUrl,
   MaxLength,
   Matches,
+  IsIn,
 } from "class-validator";
 import { AgentService } from "./agent.service";
 import { EvaluationStore } from "./evaluation.store";
@@ -30,6 +31,14 @@ import { EvaluationStreamService } from "./evaluation-stream.service";
 import { parseEventCursor } from "./evaluation-events";
 
 class StartInterviewDto {
+  @IsOptional()
+  @IsIn([2, 4])
+  questionCount?: 2 | 4;
+
+  @IsOptional()
+  @IsIn(["react", "nextjs", "engineering", "performance"])
+  focusDimension?: "react" | "nextjs" | "engineering" | "performance";
+
   @IsString()
   @IsNotEmpty()
   projectId!: string;
@@ -171,6 +180,10 @@ export class AgentController {
       body.jobDescription ?? "",
       body.projectUrl,
       request.user.id,
+      {
+        questionCount: body.questionCount,
+        focusDimension: body.focusDimension,
+      },
     );
   }
 }

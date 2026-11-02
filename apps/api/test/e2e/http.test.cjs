@@ -191,6 +191,11 @@ test(
         return {
           content: JSON.stringify({
             verdict: insufficient ? "insufficient_evidence" : "partial",
+            referenceAnswer: {
+              content:
+                "Controlled reference answer based on the saved code evidence.",
+              evidenceIds: [input.evidence.items[0].id],
+            },
             criteria: [
               "correctness",
               "code_evidence",
@@ -490,6 +495,27 @@ test(
         assert.deepEqual(saved.evidence, beforeRetry.evidence);
         assert.deepEqual(saved.trace, beforeRetry.trace);
         assert.equal(firstRun.evaluation.score, 6.1);
+        assert.equal(
+          firstRun.evaluation.referenceAnswer.content,
+          "Controlled reference answer based on the saved code evidence.",
+        );
+        assert.ok(
+          saved.evidence.items.some((item) =>
+            firstRun.evaluation.referenceAnswer.evidenceIds.includes(item.id),
+          ),
+        );
+        assert.deepEqual(
+          saved.evaluation.referenceAnswer,
+          firstRun.evaluation.referenceAnswer,
+        );
+        const detail = await json(
+          `/reports/interviews/${session.interviewId}`,
+          { cookie: owner.cookie },
+        );
+        assert.deepEqual(
+          detail.answers[0].referenceAnswer,
+          firstRun.evaluation.referenceAnswer,
+        );
       },
     );
     await scenario(
@@ -702,6 +728,62 @@ test(
           ).question.id,
           practice.question.id,
         );
+      },
+    );
+    await scenario(
+      "short practice validates preferences, prioritizes a dimension and completes in two turns",
+      async () => {
+        for (const invalid of [
+          { questionCount: 3 },
+          { focusDimension: "unknown" },
+        ])
+          await json(
+            "/interviews/start",
+            {
+              cookie: owner.cookie,
+              body: { projectId: project.id, ...invalid },
+            },
+            400,
+          );
+        const short = await json(
+          "/interviews/start",
+          {
+            cookie: owner.cookie,
+            body: {
+              projectId: project.id,
+              questionCount: 2,
+              focusDimension: "performance",
+            },
+          },
+          201,
+        );
+        assert.equal(short.totalQuestions, 2);
+        assert.equal(short.question.dimension, "performance");
+        let question = short.question;
+        for (let index = 0; index < 2; index++) {
+          const run = await json(
+            `/interviews/${short.interviewId}/answer`,
+            {
+              cookie: owner.cookie,
+              body: {
+                questionId: question.id,
+                answer: "short-practice-fixture",
+              },
+            },
+            202,
+          );
+          const completed = await waitRun(run.id, owner.cookie, "completed");
+          assert.equal(completed.evaluation.totalQuestions, 2);
+          assert.equal(completed.evaluation.completed, index === 1);
+          question = completed.evaluation.nextQuestion;
+        }
+        assert.equal(question, undefined);
+        const detail = await json(`/reports/interviews/${short.interviewId}`, {
+          cookie: owner.cookie,
+        });
+        assert.equal(detail.totalQuestions, 2);
+        assert.equal(detail.answers.length, 2);
+        assert.equal(detail.status, "completed");
       },
     );
     await scenario(

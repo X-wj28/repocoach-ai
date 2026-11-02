@@ -118,3 +118,47 @@ test("restores an interview session after an API restart", async () => {
   assert.equal(progress[0].interviewId, "interview-saved");
   assert.equal(progress[0].questionNumber, 1);
 });
+
+test("short practice starts with the selected supported dimension and persists only the selected count", async () => {
+  const project = {
+    id: "p",
+    name: "p",
+    url: "https://github.com/example/p",
+    stack: ["React"],
+    readmePreview: "",
+    files: [
+      {
+        path: "src/App.tsx",
+        size: 100,
+        language: "TSX",
+        snippet: "const [state,setState] = useState([]); state.map(render);",
+      },
+    ],
+  };
+  let saved;
+  const { AgentService } = require("../dist/agent/agent.service.js");
+  const service = new AgentService(
+    { getProjectContext: async () => project },
+    {},
+    {
+      createInterview: async (input) => {
+        saved = input;
+      },
+    },
+  );
+  const result = await service.startInterview("p", "JD", project.url, "user", {
+    questionCount: 2,
+    focusDimension: "performance",
+  });
+  assert.equal(result.totalQuestions, 2);
+  assert.equal(result.question.dimension, "performance");
+  assert.equal(saved.questions.length, 2);
+  assert.equal(saved.totalQuestions, 2);
+  await assert.rejects(
+    service.startInterview("p", "JD", project.url, "user", {
+      questionCount: 2,
+      focusDimension: "nextjs",
+    }),
+    (error) => error.getStatus() === 400,
+  );
+});

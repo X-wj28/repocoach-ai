@@ -429,6 +429,8 @@ export class ReportStore {
         score: answer.score,
         strengths: this.parseList(answer.strengths),
         improvements: this.parseList(answer.improvements),
+        referenceAnswer: this.restoreEvaluation(answer.evaluation)
+          ?.referenceAnswer,
         provider: answer.provider,
         trace: this.restoreEvaluation(answer.evaluation)?.trace,
         rubric: this.restoreEvaluation(answer.evaluation)?.rubric,

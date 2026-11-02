@@ -1,6 +1,64 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 const { EvaluationWorker } = require("../dist/agent/evaluation.worker");
+const {
+  RUBRIC_VERSION,
+  SCORING_PROMPT_VERSION,
+} = require("../dist/agent/rubric");
+
+test("scoring saves the reference answer and resumes runs created before the upgrade", async () => {
+  const referenceAnswer = {
+    content: "请求返回 Promise，应由调用方检查响应与处理异常。",
+    evidenceIds: ["ev1"],
+  };
+  for (const promptVersion of [SCORING_PROMPT_VERSION, "rubric-grader-v2"]) {
+    let saved;
+    const worker = new EvaluationWorker(
+      {
+        async complete(run, evaluation) {
+          saved = evaluation;
+        },
+        async fail(run, code) {
+          assert.fail(code);
+        },
+      },
+      {},
+      {},
+      {
+        async score() {
+          return {
+            rubric: { score: 5, criteria: [] },
+            referenceAnswer,
+            scoring: {},
+          };
+        },
+      },
+    );
+    await worker.process({
+      interviewId: "interview",
+      interview: { projectId: "p", jobDescription: "" },
+      rubricVersion: RUBRIC_VERSION,
+      promptVersion,
+      model: "fixture-model",
+      status: "SCORING_RUNNING",
+      questionNumber: 1,
+      answer: "a",
+      scoringAttempts: 1,
+      questions: [{ id: "q", prompt: "说明调用链", contextPath: "request.ts" }],
+      projectContext: {
+        id: "p",
+        name: "p",
+        url: "https://github.com/example/p",
+        readmePreview: "",
+        stack: [],
+        files: [],
+      },
+      evidence: { items: [] },
+    });
+    assert.deepEqual(saved.referenceAnswer, referenceAnswer);
+    assert.equal(saved.completed, true);
+  }
+});
 test("continuous status polling cannot postpone a pending queue claim", async (t) => {
   t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: 0 });
   let claims = 0;

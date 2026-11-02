@@ -473,6 +473,11 @@ test(
               scoringCalls++;
               assert.deepEqual(input.evidence, snapshot.evidence);
               return {
+                referenceAnswer: {
+                  content:
+                    "结合当前代码解释技术取舍和异常恢复，并为失败分支补充测试。",
+                  evidenceIds: [input.evidence.items[0].id],
+                },
                 rubric: validateRubric(
                   {
                     verdict: "partial",
@@ -499,6 +504,15 @@ test(
         const completed = await runs.get(snapshot.id, userId);
         assert.equal(completed.status, "completed");
         assert.equal(completed.evaluation.score, 5);
+        assert.equal(
+          completed.evaluation.referenceAnswer.content,
+          "结合当前代码解释技术取舍和异常恢复，并为失败分支补充测试。",
+        );
+        assert.deepEqual(
+          (await store.getInterviewDetail(id, userId)).answers[0]
+            .referenceAnswer,
+          completed.evaluation.referenceAnswer,
+        );
         assert.equal(completed.attempts.evidence, 1);
         assert.equal(completed.attempts.scoring, 2);
         assert.equal(retrievalCalls, 1);

@@ -36,6 +36,11 @@ const evidence = createEvidenceBundle(project, question);
 function output(scores = [3, 3, 2, 2]) {
   return {
     verdict: "partial",
+    referenceAnswer: {
+      content:
+        "当前 request 直接返回 fetch Promise，调用方应处理网络失败，并检查响应状态。建议为异常状态和超时增加测试。",
+      evidenceIds: [evidence.items[0].id],
+    },
     criteria: CRITERIA.map((c, i) => ({
       key: c.key,
       score: scores[i],
@@ -119,6 +124,69 @@ test("scoring has no tools and rejects forged follow-up paths", async () => {
   assert.equal(calls, 1);
   assert.equal(result.next, undefined);
   assert.ok(result.rubric.score < 10);
+  assert.deepEqual(result.referenceAnswer, output().referenceAnswer);
+});
+
+test("a successful grade requires a nonempty reference answer with valid code citations", async () => {
+  for (const mutate of [
+    (p) => delete p.referenceAnswer,
+    (p) => (p.referenceAnswer = null),
+    (p) => (p.referenceAnswer.content = "  "),
+    (p) => (p.referenceAnswer.content = "a".repeat(6001)),
+    (p) => (p.referenceAnswer.evidenceIds = []),
+    (p) => (p.referenceAnswer.evidenceIds = ["invented"]),
+    (p) =>
+      (p.referenceAnswer.evidenceIds = [
+        evidence.items[0].id,
+        evidence.items[0].id,
+      ]),
+    (p) => (p.referenceAnswer.evidenceIds = "not-an-array"),
+  ]) {
+    const parsed = output();
+    mutate(parsed);
+    const scorer = new RubricScorer({
+      enabled: true,
+      modelId: "fixture-model",
+      complete: async () => ({ content: JSON.stringify(parsed) }),
+    });
+    await assert.rejects(
+      scorer.score({
+        answer: "a",
+        question,
+        evidence,
+        model: "fixture-model",
+        jobDescription: "",
+      }),
+      (e) => e.code === "INVALID_RUBRIC_OR_REFERENCE",
+    );
+  }
+});
+
+test("insufficient evidence still returns a bounded reference explanation without inventing citations", async () => {
+  const parsed = output([null, null, null, null]);
+  parsed.verdict = "insufficient_evidence";
+  parsed.referenceAnswer = {
+    content: "  当前证据不足以确认内部实现，需要补充请求处理模块后再判断。  ",
+    evidenceIds: [],
+  };
+  const scorer = new RubricScorer({
+    enabled: true,
+    modelId: "fixture-model",
+    complete: async () => ({ content: JSON.stringify(parsed) }),
+  });
+  const result = await scorer.score({
+    answer: "a",
+    question,
+    evidence: { ...evidence, items: [] },
+    model: "fixture-model",
+    jobDescription: "",
+  });
+  assert.equal(result.rubric.score, null);
+  assert.equal(
+    result.referenceAnswer.content,
+    parsed.referenceAnswer.content.trim(),
+  );
+  assert.deepEqual(result.referenceAnswer.evidenceIds, []);
 });
 test("provider faults and invalid references are distinct retryable scoring failures", async () => {
   for (const [complete, code] of [

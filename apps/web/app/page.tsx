@@ -57,6 +57,10 @@ import { TrainingMemoryPanel } from "./components/training-memory";
 import { CapabilityReportView } from "./components/capability-report";
 import { SessionSummary } from "./components/session-summary";
 import { useCapabilityReport } from "@/lib/use-capability-report";
+import type { TrainingPreferences as Preferences } from "@/lib/api";
+import { TrainingPreferences } from "./components/training-preferences";
+import { FirstTrainingGuide } from "./components/first-training-guide";
+import { AuthIntroduction } from "./components/auth-introduction";
 
 const navItems = [
   { label: "工作台", icon: LayoutDashboard },
@@ -109,7 +113,7 @@ const fallbackProject: Project = {
   url: "https://github.com/lin-student/acme-dashboard",
   visibility: "public",
   stack: ["Next.js 14", "React", "TypeScript"],
-  analyzedFiles: 19,
+  analyzedFiles: 0,
   status: "synced",
 };
 
@@ -198,6 +202,19 @@ function downloadInterviewReport(interview: InterviewDetail) {
       "### 可以改进",
       "",
       ...item.improvements.map((improvement) => `- ${improvement}`),
+      "",
+      "### 参考答案",
+      "",
+      item.referenceAnswer?.content ??
+        (item.provider === "deepseek"
+          ? "此记录未保存参考答案。"
+          : "演示模式未生成参考答案。"),
+      ...(item.referenceAnswer?.evidenceIds.flatMap((id) => {
+        const source = item.evidence?.items.find((source) => source.id === id);
+        return source
+          ? [`- 参考依据：${source.path}:${source.startLine}–${source.endLine}`]
+          : [];
+      }) ?? []),
       ...(item.rubric
         ? [
             "",
@@ -326,36 +343,7 @@ function AuthScreen({
   if (verificationRequired) {
     return (
       <main className="auth-shell">
-        <section className="auth-brand">
-          <div className="brand-row">
-            <div className="brand-mark">
-              <Sparkles size={18} />
-            </div>
-            <div>
-              <div className="brand-name">RepoCoach</div>
-              <div className="brand-caption">FE INTERVIEW LAB</div>
-            </div>
-          </div>
-          <div className="auth-position">
-            <span>AI 项目面试工作台</span>
-            <h1>把真实代码，练成有证据的面试表达</h1>
-            <p>验证邮箱后即可开始你的项目面试训练。</p>
-          </div>
-          <div className="auth-proof">
-            <span>
-              <Github size={15} />
-              代码级提问
-            </span>
-            <span>
-              <Sparkles size={15} />
-              自适应追问
-            </span>
-            <span>
-              <BarChart3 size={15} />
-              真实能力报告
-            </span>
-          </div>
-        </section>
+        <AuthIntroduction verifying />
         <section className="auth-form-wrap">
           <div className="auth-form-heading">
             <span className="section-kicker">
@@ -425,53 +413,25 @@ function AuthScreen({
 
   return (
     <main className="auth-shell">
-      <section className="auth-brand">
-        <div className="brand-row">
-          <div className="brand-mark">
-            <Sparkles size={18} />
-          </div>
-          <div>
-            <div className="brand-name">RepoCoach</div>
-            <div className="brand-caption">FE INTERVIEW LAB</div>
-          </div>
-        </div>
-        <div className="auth-position">
-          <span>AI 项目面试工作台</span>
-          <h1>把真实代码，练成有证据的面试表达</h1>
-          <p>导入 GitHub 项目，由 Agent 连续追问、评分并沉淀个人能力报告。</p>
-        </div>
-        <div className="auth-proof">
-          <span>
-            <Github size={15} />
-            代码级提问
-          </span>
-          <span>
-            <Sparkles size={15} />
-            自适应追问
-          </span>
-          <span>
-            <BarChart3 size={15} />
-            真实能力报告
-          </span>
-        </div>
-      </section>
+      <AuthIntroduction />
       <section className="auth-form-wrap">
         <div className="auth-form-heading">
           <span className="section-kicker">
             <LockKeyhole size={14} />
             账号工作区
           </span>
-          <h2>{mode === "login" ? "登录 RepoCoach" : "创建你的账号"}</h2>
+          <h2>{mode === "login" ? "欢迎回来" : "创建你的账号"}</h2>
           <p>
             {mode === "login"
-              ? "继续你的项目面试训练。"
+              ? "登录 RepoCoach，继续你的项目面试训练。"
               : "仅支持 Gmail，注册后需完成邮箱验证。"}
           </p>
         </div>
-        <div className="auth-tabs" role="tablist">
+        <div className="auth-tabs" role="group" aria-label="登录或注册">
           <button
             type="button"
             className={mode === "login" ? "auth-tab-active" : ""}
+            aria-pressed={mode === "login"}
             onClick={() => {
               setMode("login");
               setError(null);
@@ -483,6 +443,7 @@ function AuthScreen({
           <button
             type="button"
             className={mode === "register" ? "auth-tab-active" : ""}
+            aria-pressed={mode === "register"}
             onClick={() => {
               setMode("register");
               setError(null);
@@ -689,9 +650,12 @@ function Workspace({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [projectError, setProjectError] = useState<string | null>(null);
-  const [repoUrl, setRepoUrl] = useState(project.url);
+  const [repoUrl, setRepoUrl] = useState("");
   const [jobDescription, setJobDescription] = useState(defaultJobDescription);
   const [notice, setNotice] = useState<string | null>(null);
+  const [trainingPreferences, setTrainingPreferences] = useState<Preferences>({
+    questionCount: 4,
+  });
 
   const alive = useRef(true);
   const analyzeSerial = useRef(0);
@@ -711,7 +675,9 @@ function Workspace({
       setWorkspaceStorageFailed(true);
     }
     setProject(saved?.project ?? fallbackProject);
-    setRepoUrl(saved?.project.url ?? fallbackProject.url);
+    setRepoUrl(
+      saved?.project.id !== "demo-project" ? (saved?.project.url ?? "") : "",
+    );
     setJobDescription(saved?.jobDescription || defaultJobDescription);
     setWorkspaceReady(true);
   }, [currentUser.id]);
@@ -731,6 +697,7 @@ function Workspace({
     }
   }, [workspaceReady, currentUser.id, project, jobDescription]);
   const training = useTrainingSession({
+    preferences: trainingPreferences,
     project,
     jobDescription,
     userId: currentUser.id,
@@ -886,6 +853,8 @@ function Workspace({
       />
     ) : (
       <InterviewCard
+        userId={currentUser.id}
+        projectId={project.id}
         interviewId={interviewId}
         question={question}
         questionNumber={questionNumber}
@@ -956,7 +925,7 @@ function Workspace({
             {report?.completedInterviews ?? 0}
             <small> 次</small>
           </div>
-          <div className="stat-foot">完整完成四题计为一次</div>
+          <div className="stat-foot">完成本场全部题目计为一次</div>
         </div>
         <div className="stat-card">
           <div className="stat-top">
@@ -984,6 +953,20 @@ function Workspace({
         project={project}
         onChange={() => setProjectModalOpen(true)}
       />
+      {project.id === "demo-project" && !interviewId && (
+        <FirstTrainingGuide
+          disabled={!training.canStart}
+          onImport={() => setProjectModalOpen(true)}
+          onDemo={handleStartTraining}
+        />
+      )}
+      {project.id !== "demo-project" && !training.unfinished && (
+        <TrainingPreferences
+          value={trainingPreferences}
+          disabled={!training.canStart}
+          onChange={setTrainingPreferences}
+        />
+      )}
       <div className="dashboard-grid">
         {renderWorkbench()}
         <SignalPanel
@@ -1029,7 +1012,23 @@ function Workspace({
       {isStarting ? (
         <InterviewStartingCard projectName={project.name} />
       ) : (
-        renderWorkbench()
+        <>
+          {project.id === "demo-project" && !interviewId && (
+            <FirstTrainingGuide
+              disabled={!training.canStart}
+              onImport={() => setProjectModalOpen(true)}
+              onDemo={handleStartTraining}
+            />
+          )}
+          {project.id !== "demo-project" && !training.unfinished && (
+            <TrainingPreferences
+              value={trainingPreferences}
+              disabled={!training.canStart}
+              onChange={setTrainingPreferences}
+            />
+          )}
+          {renderWorkbench()}
+        </>
       )}
       <TrainingMemoryPanel
         key={currentUser.id + project.id}
@@ -1109,7 +1108,11 @@ function Workspace({
           </div>
           <div className="settings-row">
             <span>已分析文件</span>
-            <strong>{project.analyzedFiles} 个</strong>
+            <strong>
+              {project.id === "demo-project"
+                ? "示例项目 · 尚未导入"
+                : `${project.analyzedFiles} 个`}
+            </strong>
           </div>
           {project.description && (
             <p className="settings-description">{project.description}</p>
@@ -1160,14 +1163,15 @@ function Workspace({
 
   return (
     <main className="app-shell">
+      <a className="skip-link" href="#workspace-content">跳到工作区</a>
       <aside className={`sidebar ${mobileOpen ? "sidebar-open" : ""}`}>
         <div className="brand-row">
           <div className="brand-mark">
-            <Sparkles size={17} />
+            <Code2 size={21} aria-hidden="true" />
           </div>
           <div>
-            <div className="brand-name">RepoCoach</div>
-            <div className="brand-caption">FE INTERVIEW LAB</div>
+            <div className="brand-name">RepoCoach<span className="brand-fe">FE</span></div>
+            <div className="brand-caption">你的项目面试教练</div>
           </div>
           <button
             className="icon-button sidebar-close"
@@ -1187,17 +1191,20 @@ function Workspace({
           <div className="workspace-copy">
             <strong>{project.name}</strong>
             <span>
-              公开仓库 · {project.status === "synced" ? "已同步" : "分析中"}
+              {project.id === "demo-project"
+                ? "示例项目 · 未导入"
+                : `公开仓库 · ${project.status === "synced" ? "已同步" : "分析中"}`}
             </span>
           </div>
           <ChevronRight size={16} className="muted-icon" />
         </button>
-        <div className="nav-group">
+        <nav className="nav-group" aria-label="工作区导航">
           <div className="nav-label">工作区</div>
           {navItems.map(({ label, icon: Icon }) => (
             <button
               className={`nav-item ${activeNav === label ? "nav-item-active" : ""}`}
               key={label}
+              aria-current={activeNav === label ? "page" : undefined}
               onClick={() => handleNav(label)}
             >
               <Icon size={17} />
@@ -1209,7 +1216,7 @@ function Workspace({
               )}
             </button>
           ))}
-        </div>
+        </nav>
         <div className="sidebar-bottom">
           <div className="plan-status">
             <div className="plan-icon">
@@ -1254,7 +1261,7 @@ function Workspace({
             <Menu size={20} />
           </button>
           <div className="breadcrumb">
-            <span>工作台</span>
+            <span>我的工作区</span>
             <ChevronRight size={14} />
             <strong>{activeNav}</strong>
           </div>
@@ -1268,7 +1275,7 @@ function Workspace({
             </button>
           </div>
         </header>
-        <div className="content-wrap">
+        <div className="content-wrap" id="workspace-content" tabIndex={-1}>
           {workspaceStorageFailed && (
             <div className="notice-banner" role="status">
               <Info size={15} />
@@ -1337,6 +1344,11 @@ function Workspace({
               onChange={(event) => setRepoUrl(event.target.value)}
               placeholder="https://github.com/用户名/仓库名"
             />
+            {project.id === "demo-project" && (
+              <p className="import-guidance">
+                请替换为你自己的公开仓库地址。分析完成后，可以选择短练或完整训练。
+              </p>
+            )}
             <label className="answer-label" htmlFor="job-description">
               目标岗位 JD
             </label>
@@ -1431,6 +1443,7 @@ function Workspace({
       )}
       {reviewSessionId && (
         <InterviewReview
+          userId={currentUser.id}
           key={reviewSessionId}
           sessionId={reviewSessionId}
           initialQuestionNumber={reviewQuestionNumber}
@@ -1464,7 +1477,11 @@ function ProjectContext({
         {project.stack.map((tag) => (
           <span key={tag}>{tag}</span>
         ))}
-        <span>{project.analyzedFiles} 个文件已分析</span>
+        <span>
+          {project.id === "demo-project"
+            ? "示例项目 · 尚未导入仓库"
+            : `${project.analyzedFiles} 个文件已分析`}
+        </span>
       </div>
       <button className="text-button" onClick={onChange}>
         更换项目 <ArrowUpRight size={15} />

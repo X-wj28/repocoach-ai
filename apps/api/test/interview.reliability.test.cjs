@@ -128,6 +128,38 @@ test("all planned questions cite saved files and reproducible code lines", () =>
   assert.deepEqual(planInterviewQuestions({ ...project, files: [] }), []);
 });
 
+test("client-only components are not mistaken for data fetching and questions spread across matching files", () => {
+  const file = (path, snippet) => ({
+    path,
+    snippet,
+    size: snippet.length,
+    language: "TypeScript",
+  });
+  const context = {
+    ...project,
+    files: [
+      file(
+        "components/Input.tsx",
+        "'use client'; const [text, setText] = useState('');",
+      ),
+      file("lib/request.ts", "export const load = () => fetch('/items');"),
+      file("components/List.tsx", "const rows = items.map(renderItem);"),
+      file("lib/recover.ts", "try { submit(); } catch (error) { retry(); }"),
+    ],
+  };
+  const questions = planInterviewQuestions(context);
+  assert.equal(questions[0].contextPath, "lib/request.ts");
+  assert.equal(
+    new Set(questions.map((question) => question.contextPath)).size,
+    4,
+  );
+  const clientOnly = planInterviewQuestions({
+    ...context,
+    files: [context.files[0]],
+  });
+  assert.doesNotMatch(clientOnly[0].prompt, /数据获取/);
+});
+
 test("evidence selection prioritizes the current and planned source files", () => {
   const questions = planInterviewQuestions(project);
   const context = selectEvidenceContext(project, questions[2], questions[3]);

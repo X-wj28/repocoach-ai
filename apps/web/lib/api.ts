@@ -54,6 +54,7 @@ export type Evaluation = {
   score: number | null;
   strengths: string[];
   improvements: string[];
+  referenceAnswer?: { content: string; evidenceIds: string[] };
   nextQuestion?: Question;
   questionNumber?: number;
   totalQuestions?: number;
@@ -136,6 +137,7 @@ export type InterviewDetail = {
     score: number | null;
     strengths: string[];
     improvements: string[];
+    referenceAnswer?: Evaluation["referenceAnswer"];
     provider: string;
     answeredAt: string;
     trace?: EvidenceTrace;
@@ -192,10 +194,12 @@ export function analyzeProject(repoUrl: string, jobDescription: string) {
   });
 }
 
-export function startInterview(projectId: string, jobDescription: string, projectUrl: string) {
+export type TrainingPreferences = { questionCount: 2 | 4; focusDimension?: Question["dimension"] };
+
+export function startInterview(projectId: string, jobDescription: string, projectUrl: string, preferences?: TrainingPreferences) {
   return request<{ interviewId: string; projectId: string; question: Question; questionNumber: number; totalQuestions: number; provider: string; mode: string; practiceFocus?: PracticeFocus[] }>("/interviews/start", {
     method: "POST",
-    body: JSON.stringify({ projectId, jobDescription, projectUrl })
+    body: JSON.stringify({ projectId, jobDescription, projectUrl, ...preferences })
   });
 }
 

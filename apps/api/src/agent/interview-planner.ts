@@ -10,7 +10,7 @@ type QuestionDraft = Omit<Question, "id" | "evidence">;
 
 const signals = {
   react: /useState|useReducer|useContext|zustand|redux/i,
-  nextjs: /fetch\s*\(|axios|useSWR|useQuery|use client/i,
+  nextjs: /fetch\s*\(|axios|useSWR|useQuery/i,
   performance: /\.map\s*\(|useMemo|useCallback|memo\s*\(|cache|Promise\.all/i,
   engineering: /catch\s*[({]|throw |error|loading|pending|abort/i,
 };
@@ -53,9 +53,23 @@ export function planInterviewQuestions(project: ProjectContext): Question[] {
   if (!files.length) return [];
   const hasReact = project.stack.some((name) => /react|next/i.test(name));
   const hasNext = project.stack.some((name) => /next/i.test(name));
-  const pick = (dimension: Question["dimension"]) =>
-    files.find((file) => signals[dimension].test(file.snippet)) ?? files[0];
+  const used = new Set<string>();
+  const pick = (dimension: Question["dimension"]) => {
+    const matching = files.filter((file) =>
+      signals[dimension].test(file.snippet),
+    );
+    const file =
+      matching.find((file) => !used.has(file.path)) ??
+      matching[0] ??
+      files.find((file) => !used.has(file.path)) ??
+      files[0];
+    used.add(file.path);
+    return file;
+  };
   const dataFile = pick("nextjs");
+  const reactFile = pick("react");
+  const performanceFile = pick("performance");
+  const engineeringFile = pick("engineering");
   const specs: QuestionDraft[] = [
     {
       prompt: signals.nextjs.test(dataFile.snippet)
@@ -72,20 +86,20 @@ export function planInterviewQuestions(project: ProjectContext): Question[] {
       difficulty: "进阶",
     },
     {
-      prompt: `请结合 ${pick("react").path} 解释${hasReact ? "状态的归属、共享范围和更新方式" : "模块的数据流与职责边界"}。你如何判断哪些逻辑应该拆分或复用？`,
-      contextPath: pick("react").path,
+      prompt: `请结合 ${reactFile.path} 解释${hasReact ? "状态的归属、共享范围和更新方式" : "模块的数据流与职责边界"}。你如何判断哪些逻辑应该拆分或复用？`,
+      contextPath: reactFile.path,
       dimension: hasReact ? "react" : "engineering",
       difficulty: "基础",
     },
     {
-      prompt: `如果需要优化 ${pick("performance").path} 的性能，你会怎样测量和定位瓶颈？请结合已有实现解释优化的收益、代价和验证方法。`,
-      contextPath: pick("performance").path,
+      prompt: `如果需要优化 ${performanceFile.path} 的性能，你会怎样测量和定位瓶颈？请结合已有实现解释优化的收益、代价和验证方法。`,
+      contextPath: performanceFile.path,
       dimension: "performance",
       difficulty: "深入",
     },
     {
-      prompt: `请结合 ${pick("engineering").path} 说明异常、边界输入和等待状态如何处理。你会增加哪些测试来验证失败后的行为？`,
-      contextPath: pick("engineering").path,
+      prompt: `请结合 ${engineeringFile.path} 说明异常、边界输入和等待状态如何处理。你会增加哪些测试来验证失败后的行为？`,
+      contextPath: engineeringFile.path,
       dimension: "engineering",
       difficulty: "进阶",
     },

@@ -170,6 +170,10 @@ function fixture() {
         score: provider === "deepseek" ? 8.2 : 10,
         strengths: ["状态划分清晰"],
         improvements: ["补充超时处理"],
+        referenceAnswer: {
+          content: "结合代码说明状态边界，并验证超时与失败后的恢复。",
+          evidenceIds: [],
+        },
         provider,
         completed: true,
         questionNumber: 1,
@@ -214,6 +218,23 @@ test("persists an answer, its exact response and the next state in one transacti
   assert.equal(detail.averageScore, 8.2);
   assert.equal(detail.answers[0].contextPath, "apps/web/app/page.tsx");
   assert.deepEqual(detail.answers[0].improvements, ["补充超时处理"]);
+  assert.deepEqual(
+    detail.answers[0].referenceAnswer,
+    input.evaluation.referenceAnswer,
+  );
+});
+
+test("old answers without a reference answer remain readable", async () => {
+  const f = fixture();
+  await f.create();
+  const input = f.input();
+  delete input.evaluation.referenceAnswer;
+  await f.store.recordAnswer(input);
+  const detail = await f.store.getInterviewDetail(
+    "interview-test",
+    "user-test",
+  );
+  assert.equal(detail.answers[0].referenceAnswer, undefined);
 });
 
 test("an answer insert failure rolls back the turn advancement", async () => {

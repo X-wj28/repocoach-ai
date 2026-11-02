@@ -3,7 +3,7 @@ import { DeepSeekService } from "../llm/deepseek.service";
 import { isValidQuestion, parseJsonResponse } from "../llm/agent-prompts";
 import { RUBRIC_SYSTEM_PROMPT, validateRubric } from "./rubric";
 import type { EvidenceBundle } from "./rubric";
-import type { Question } from "./interview.types";
+import type { InterviewEvaluation, Question } from "./interview.types";
 
 export class ScoringFailure extends Error {
   constructor(readonly code: string) {
@@ -53,7 +53,7 @@ export class RubricScorer {
         {
           jsonOutput: true,
           temperature: 0.15,
-          maxTokens: 2500,
+          maxTokens: 3500,
           signal: signal
             ? AbortSignal.any([signal, AbortSignal.timeout(25000)])
             : AbortSignal.timeout(25000),
@@ -67,6 +67,23 @@ export class RubricScorer {
       : null;
     const rubric = validateRubric(parsed, input.evidence);
     if (!rubric) throw new ScoringFailure("INVALID_RUBRIC_OR_REFERENCE");
+    const referenceAnswer = parsed?.referenceAnswer as
+      Partial<NonNullable<InterviewEvaluation["referenceAnswer"]>> | undefined;
+    const allowedIds = new Set(input.evidence.items.map((item) => item.id));
+    if (
+      !referenceAnswer ||
+      typeof referenceAnswer.content !== "string" ||
+      !referenceAnswer.content.trim() ||
+      referenceAnswer.content.length > 6000 ||
+      !Array.isArray(referenceAnswer.evidenceIds) ||
+      referenceAnswer.evidenceIds.length > 4 ||
+      !referenceAnswer.evidenceIds.every((id) => allowedIds.has(id)) ||
+      new Set(referenceAnswer.evidenceIds).size !==
+        referenceAnswer.evidenceIds.length ||
+      (rubric.verdict !== "insufficient_evidence" &&
+        !referenceAnswer.evidenceIds.length)
+    )
+      throw new ScoringFailure("INVALID_RUBRIC_OR_REFERENCE");
     const candidate = parsed?.nextQuestion;
     const next =
       input.next &&
@@ -76,6 +93,10 @@ export class RubricScorer {
         : undefined;
     return {
       rubric,
+      referenceAnswer: {
+        content: referenceAnswer.content.trim(),
+        evidenceIds: referenceAnswer.evidenceIds,
+      },
       next,
       scoring: {
         model: input.model,

@@ -13,6 +13,7 @@ import {
   type Project,
   type Question,
   type RunEvent,
+  type TrainingPreferences,
 } from "./api";
 import { ANSWER_LIMIT, readDraft, writeDraft } from "./drafts";
 
@@ -63,6 +64,7 @@ export function useTrainingSession({
   onNotice,
   onCompleted,
   onProjectId,
+  preferences,
 }: {
   project: Project;
   jobDescription: string;
@@ -73,6 +75,7 @@ export function useTrainingSession({
   onNotice: (message: string | null) => void;
   onCompleted: () => void;
   onProjectId: (id: string) => void;
+  preferences?: TrainingPreferences;
 }) {
   const scope = JSON.stringify([userId, project.id]);
   const currentScope = useRef(scope);
@@ -258,6 +261,7 @@ export function useTrainingSession({
         project.id,
         jobDescription,
         project.url,
+        preferences,
       );
       if (!isCurrent(token)) return;
       setState({

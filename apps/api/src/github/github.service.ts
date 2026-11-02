@@ -323,7 +323,7 @@ export class GitHubService {
         entry.type === "blob" &&
         !ignored.test(entry.path) &&
         (sourceFile.test(entry.path) ||
-          /^(readme\.md|package\.json)$/i.test(entry.path)),
+          /^readme\.md$|(^|\/)package\.json$/i.test(entry.path)),
     );
 
     return candidates
@@ -338,7 +338,15 @@ export class GitHubService {
   private fileScore(filePath: string) {
     const normalized = filePath.toLowerCase();
     if (normalized === "package.json") return 100;
+    if (normalized.endsWith("/package.json")) return 96;
     if (normalized === "readme.md") return 95;
+    if (
+      /(^|\/)(app|pages)\/(.*\/)?(page|layout|route|index)\.[jt]sx?$/.test(
+        normalized,
+      )
+    )
+      return 92;
+    if (/(^|\/)(lib|hooks)\//.test(normalized)) return 85;
     if (
       /next\.config|tsconfig|src\/lib|src\/hooks|app\/|pages\//.test(normalized)
     )
@@ -348,29 +356,32 @@ export class GitHubService {
   }
 
   private detectStack(repository: GitHubRepository, files: AnalyzedFile[]) {
-    const packageFile = files.find(
-      (file) => file.path.toLowerCase() === "package.json",
-    );
     const stack: string[] = [];
-    try {
-      const packageJson = packageFile ? JSON.parse(packageFile.snippet) : {};
-      const dependencies = {
-        ...(packageJson.dependencies ?? {}),
-        ...(packageJson.devDependencies ?? {}),
-      };
-      if (dependencies.next) stack.push("Next.js");
-      if (dependencies.react) stack.push("React");
-      if (dependencies.typescript) stack.push("TypeScript");
-      if (dependencies.tailwindcss) stack.push("Tailwind CSS");
-      if (
-        dependencies.zustand ||
-        dependencies.redux ||
-        dependencies["@reduxjs/toolkit"]
-      )
-        stack.push("状态管理");
-    } catch {
-      // The repository can still be analyzed when package.json is invalid or absent.
+    const dependencies: Record<string, unknown> = {};
+    for (const file of files.filter((file) =>
+      /(^|\/)package\.json$/i.test(file.path),
+    )) {
+      try {
+        const manifest = JSON.parse(file.snippet);
+        Object.assign(
+          dependencies,
+          manifest.dependencies ?? {},
+          manifest.devDependencies ?? {},
+        );
+      } catch {
+        /* Other workspace manifests may still identify the stack. */
+      }
     }
+    if (dependencies.next) stack.push("Next.js");
+    if (dependencies.react) stack.push("React");
+    if (dependencies.typescript) stack.push("TypeScript");
+    if (dependencies.tailwindcss) stack.push("Tailwind CSS");
+    if (
+      dependencies.zustand ||
+      dependencies.redux ||
+      dependencies["@reduxjs/toolkit"]
+    )
+      stack.push("状态管理");
 
     if (stack.length === 0 && repository.language)
       stack.push(repository.language);

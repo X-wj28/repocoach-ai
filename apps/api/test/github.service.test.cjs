@@ -60,6 +60,63 @@ test("restores a project context snapshot after an API restart", async () => {
   assert.equal(reads, 1);
 });
 
+test("workspace package manifests identify React and Next.js without a root dependency", async (t) => {
+  const files = [
+    { path: "package.json", snippet: '{"workspaces":["apps/*"]}' },
+    {
+      path: "apps/web/package.json",
+      snippet:
+        '{"dependencies":{"next":"14","react":"18"},"devDependencies":{"typescript":"5"}}',
+    },
+    { path: "apps/broken/package.json", snippet: "invalid JSON" },
+  ];
+  const entries = files.map((file, i) => ({
+    path: file.path,
+    type: "blob",
+    mode: "100644",
+    sha: String(i + 1).repeat(40),
+    size: file.snippet.length,
+  }));
+  mockNetwork(t, async (url) => {
+    const path = new URL(url).pathname;
+    if (path === "/repos/example/repo")
+      return Response.json({
+        name: "repo",
+        html_url: "https://github.com/example/repo",
+        default_branch: "main",
+        language: "TypeScript",
+        private: false,
+      });
+    if (path.endsWith("/commits/main"))
+      return Response.json({
+        sha: "a".repeat(40),
+        commit: { tree: { sha: "b".repeat(40) } },
+      });
+    if (path.includes("/trees/"))
+      return Response.json({ tree: entries, truncated: false });
+    const index = entries.findIndex((entry) =>
+      path.endsWith("/blobs/" + entry.sha),
+    );
+    if (index >= 0)
+      return Response.json({
+        encoding: "base64",
+        content: Buffer.from(files[index].snippet).toString("base64"),
+      });
+    throw Error(path);
+  });
+  const service = new GitHubService({
+    projectSnapshot: { upsert: async () => {} },
+  });
+  const result = await service.analyzePublicRepository(
+    "https://github.com/example/repo",
+    "JD",
+  );
+  assert.deepEqual(result.stack, ["Next.js", "React", "TypeScript"]);
+  assert.ok(
+    result.keyFiles.some((file) => file.path === "apps/web/package.json"),
+  );
+});
+
 test("repository analysis pins the commit tree and excludes secrets, symlinks and large files", async (t) => {
   const commitSha = "a".repeat(40),
     treeSha = "b".repeat(40),

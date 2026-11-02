@@ -18,6 +18,8 @@ import {
 import { getInterviewDetail, type InterviewDetail } from "@/lib/api";
 import { DialogSurface } from "./dialog-surface";
 import { RubricDetails } from "./rubric-details";
+import { ReferenceAnswer } from "./reference-answer";
+import { AnswerRehearsal } from "./answer-rehearsal";
 import { TrainingInspector, useTrainingInspector } from "./training-inspector";
 
 type SavedAnswer = InterviewDetail["answers"][number];
@@ -44,11 +46,13 @@ function dateLabel(value: string) {
 }
 
 export function InterviewReview({
+  userId,
   sessionId,
   initialQuestionNumber,
   onClose,
   onExport,
 }: {
+  userId?: string;
   sessionId: string;
   initialQuestionNumber?: number;
   onClose: () => void;
@@ -226,6 +230,9 @@ export function InterviewReview({
               {selected ? (
                 <>
                   <ReviewQuestion
+                    userId={userId}
+                    projectId={detail.projectId}
+                    interviewId={detail.id}
                     key={`${detail.id}:${selected.questionNumber}`}
                     answer={selected}
                   />
@@ -281,7 +288,17 @@ export function InterviewReview({
   );
 }
 
-function ReviewQuestion({ answer }: { answer: SavedAnswer }) {
+function ReviewQuestion({
+  answer,
+  userId,
+  projectId,
+  interviewId,
+}: {
+  answer: SavedAnswer;
+  userId?: string;
+  projectId: string;
+  interviewId: string;
+}) {
   const sources = answer.evidence?.items ?? [];
   const inspector = useTrainingInspector(sources);
   const demo = answer.provider !== "deepseek";
@@ -387,6 +404,24 @@ function ReviewQuestion({ answer }: { answer: SavedAnswer }) {
             )}
           </div>
         </div>
+        <ReferenceAnswer
+          originalAnswer={answer.answer}
+          referenceAnswer={answer.referenceAnswer}
+          evidence={answer.evidence}
+          demo={demo}
+          onSelectEvidence={inspector.selectEvidence}
+        />
+        {answer.referenceAnswer && userId && (
+          <AnswerRehearsal
+            userId={userId}
+            originalAnswer={answer.answer}
+            identity={{
+              projectId,
+              interviewId,
+              questionId: `rehearsal-${answer.questionNumber}`,
+            }}
+          />
+        )}
       </section>
       <TrainingInspector
         controller={inspector}

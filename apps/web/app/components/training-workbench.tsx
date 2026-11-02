@@ -15,8 +15,12 @@ import type { Evaluation, EvaluationRun, Question, RunEvent } from "@/lib/api";
 import { getRunStages, stageLabels } from "@/lib/workbench";
 import { AnswerComposer } from "./answer-composer";
 import { RubricDetails } from "./rubric-details";
+import { ReferenceAnswer } from "./reference-answer";
+import { AnswerRehearsal } from "./answer-rehearsal";
 import { TrainingInspector, useTrainingInspector } from "./training-inspector";
 export type TrainingWorkbenchProps = {
+  userId?: string;
+  projectId?: string;
   interviewId?: string | null;
   question: Question;
   questionNumber: number;
@@ -47,6 +51,8 @@ export function TrainingWorkbench(props: TrainingWorkbenchProps) {
 }
 
 function Workbench({
+  userId,
+  projectId,
   interviewId,
   question,
   questionNumber,
@@ -288,7 +294,7 @@ function Workbench({
                 ? "评价尚未完成"
                 : pendingRun.phase === "evidence"
                   ? "正在查证代码"
-                  : "正在生成四项评价"}
+                  : "正在生成评价和参考答案"}
             </strong>
             <p>
               {failed
@@ -356,6 +362,27 @@ function Workbench({
               evidence={evaluation.evidence}
               onSelectEvidence={selectEvidence}
             />
+            <ReferenceAnswer
+              originalAnswer={pendingRun?.answer ?? answer}
+              referenceAnswer={evaluation.referenceAnswer}
+              evidence={evaluation.evidence}
+              demo={demo}
+              onSelectEvidence={selectEvidence}
+            />
+            {evaluation.referenceAnswer &&
+              userId &&
+              interviewId &&
+              projectId && (
+                <AnswerRehearsal
+                  userId={userId}
+                  originalAnswer={pendingRun?.answer ?? answer}
+                  identity={{
+                    projectId,
+                    interviewId,
+                    questionId: `rehearsal-${questionNumber}`,
+                  }}
+                />
+              )}
             <div className="feedback-columns">
               <div>
                 <span className="feedback-label">做得不错</span>

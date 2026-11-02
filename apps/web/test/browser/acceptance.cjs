@@ -128,6 +128,11 @@ const evaluation = {
   score: 6.5,
   strengths: ["能够结合源码说明评分条件。"],
   improvements: ["补充可比较样本减少时的报告展示与验证。"],
+  referenceAnswer: {
+    content:
+      "有一项无法判断时，null 表示证据不足，不应当作零分。只有四项均可判断，才按固定权重计算总分。\n\n这样保留评分的可比性，代价是可比较样本减少。应保留各分项反馈及源码引用，并测试部分评分为 null 时总分仍为 null。",
+    evidenceIds: ["ev1"],
+  },
   nextQuestion,
   questionNumber: 2,
   totalQuestions: 4,
@@ -239,6 +244,7 @@ const historyAnswers = [
     score: 6.5,
     strengths: initialEvaluation.strengths,
     improvements: initialEvaluation.improvements,
+    referenceAnswer: initialEvaluation.referenceAnswer,
     provider: "deepseek",
     answeredAt: "2026-10-19T02:32:00Z",
     rubric: initialEvaluation.rubric,
@@ -365,6 +371,7 @@ function complete() {
   });
   broadcast();
 }
+let lastStartBody;
 const api = http.createServer(async (request, response) => {
   response.setHeader("Access-Control-Allow-Origin", appOrigin);
   response.setHeader("Access-Control-Allow-Credentials", "true");
@@ -458,6 +465,9 @@ const api = http.createServer(async (request, response) => {
     });
   }
   if (url.pathname.endsWith("/interviews/start")) {
+    let raw = "";
+    for await (const chunk of request) raw += chunk;
+    lastStartBody = JSON.parse(raw || "{}");
     startRequests++;
     const ms = delayStart;
     delayStart = 0;
@@ -475,7 +485,7 @@ const api = http.createServer(async (request, response) => {
         prompt: "本次重点练习失败边界：说明恢复行为并给出验证方法。",
       },
       questionNumber: 1,
-      totalQuestions: 4,
+      totalQuestions: lastStartBody.questionCount ?? 4,
       practiceFocus: [
         {
           criterion: "failure_boundaries",
@@ -802,6 +812,11 @@ async function main() {
     '!!document.querySelector("textarea[name=answer]")',
     "training page",
   );
+  assert.equal(
+    await evaluate('document.querySelectorAll(".reference-answer").length'),
+    0,
+    "reference answers are hidden before submission",
+  );
   await evaluate(
     `(()=>{const input=document.querySelector('textarea[name=answer]');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(input,'证据不足时 null 不等于零分。只有四项可判断，才能计算加权总分；同时保留源码引用，让用户核对。还应说明可比较样本减少的代价与异常验证。');input.dispatchEvent(new Event('input',{bubbles:true}));})()`,
   );
@@ -904,11 +919,80 @@ async function main() {
   assert.equal(retryRequests, 1);
   assert.equal(
     await evaluate(
+      'document.querySelector(".reference-answer-content").textContent',
+    ),
+    initialEvaluation.referenceAnswer.content,
+  );
+  await evaluate('document.querySelector(".reference-source-link").click()');
+  await until(
+    '!!document.querySelector("dialog[open] .source-reason")',
+    "reference answer code citation",
+  );
+  assert.ok(
+    await evaluate(
+      'document.querySelector(".source-reason").textContent.includes("null 表示证据不足")',
+    ),
+  );
+  await close();
+  assert.equal(
+    await evaluate(
       'document.querySelector(".workbench-score").textContent.trim()',
     ),
     "6.5/ 10",
   );
   await shot("workbench-app-feedback.png");
+  await evaluate(
+    'document.querySelector(".reference-answer").scrollIntoView({block:"center"})',
+  );
+  await shot("reference-answer-desktop.png");
+  await evaluate('document.querySelector(".reference-compare-toggle").click()');
+  assert.equal(
+    await evaluate(
+      'document.querySelector(".reference-original p").textContent',
+    ),
+    savedAnswer,
+  );
+  await evaluate(
+    'document.querySelector(".answer-rehearsal > button").click()',
+  );
+  const revisedAnswer =
+    "我的改写：四项都可判断时才计算总分，并测试 null 与零分的区别。";
+  await evaluate(
+    `(()=>{const input=document.querySelector('textarea[name=rehearsal]');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(input,${JSON.stringify(revisedAnswer)});input.dispatchEvent(new Event('input',{bubbles:true}));})()`,
+  );
+  assert.ok(
+    await evaluate(
+      'document.querySelector(".rehearsal-footer p").textContent.includes("已保存在此浏览器")',
+    ),
+  );
+  assert.equal(
+    await evaluate(
+      'document.querySelector(".workbench-saved-answer > p").textContent',
+    ),
+    savedAnswer,
+  );
+  assert.equal(
+    retryRequests,
+    1,
+    "rewriting does not submit another evaluation",
+  );
+  await evaluate(
+    'document.querySelector(".answer-rehearsal .rehearsal-footer button").click()',
+  );
+  assert.ok(
+    await evaluate(
+      'document.querySelector(".answer-rehearsal .rehearsal-footer button").getAttribute("aria-pressed")==="true"',
+    ),
+  );
+  await shot("feedback-compare-rehearsal-desktop.png");
+  await reload();
+  await until('!!document.querySelector(".workbench-feedback")', "feedback restored for rehearsal");
+  await evaluate('document.querySelector(".answer-rehearsal > button").click()');
+  assert.equal(await evaluate('document.querySelector("textarea[name=rehearsal]").value'), revisedAnswer);
+  await evaluate('document.querySelector(".reference-compare-toggle").click()');
+  await evaluate(
+    'document.querySelector(".answer-rehearsal > button").click();document.querySelector(".reference-compare-toggle").click()',
+  );
   await evaluate(
     'document.querySelector(".evidence-link").focus();document.querySelector(".evidence-link").click()',
   );
@@ -951,6 +1035,27 @@ async function main() {
   await delay(200);
   assert.ok(await evaluate("document.documentElement.scrollWidth<=innerWidth"));
   await shot("workbench-app-mobile.png");
+  await evaluate(
+    'document.querySelector(".reference-answer").scrollIntoView({block:"center"})',
+  );
+  assert.ok(
+    await evaluate(
+      'document.querySelector(".reference-answer").scrollWidth<=document.querySelector(".reference-answer").clientWidth',
+    ),
+  );
+  await shot("reference-answer-mobile.png");
+  await evaluate(
+    'document.querySelector(".reference-compare-toggle").click();document.querySelector(".answer-rehearsal > button").click()',
+  );
+  assert.ok(
+    await evaluate(
+      'document.documentElement.scrollWidth<=innerWidth && document.querySelector(".rehearsal-comparison").scrollWidth<=document.querySelector(".rehearsal-comparison").clientWidth',
+    ),
+  );
+  await shot("feedback-compare-rehearsal-mobile.png");
+  await evaluate(
+    'document.querySelector(".answer-rehearsal > button").click();document.querySelector(".reference-compare-toggle").click()',
+  );
   await evaluate('document.querySelector(".evidence-link").click()');
   await delay(100);
   assert.ok(
@@ -1007,6 +1112,12 @@ async function main() {
     "unjudged feedback",
   );
   assert.equal(
+    await evaluate(
+      'document.querySelector(".reference-answer-content").textContent',
+    ),
+    initialEvaluation.referenceAnswer.content,
+  );
+  assert.equal(
     await evaluate('document.querySelector(".workbench-score").textContent'),
     "无法判断",
   );
@@ -1056,6 +1167,12 @@ async function main() {
     ),
   );
   await shot("workbench-review-desktop.png");
+  assert.equal(
+    await evaluate(
+      'document.querySelector(".history-answer .reference-answer-content").textContent',
+    ),
+    initialEvaluation.referenceAnswer.content,
+  );
   await evaluate(
     'document.querySelector(".history-answer .evidence-link").focus()',
   );
@@ -1146,6 +1263,11 @@ async function main() {
       'document.querySelector(".history-feedback-note").textContent.includes("旧记录没有保存四项评分")',
     ),
   );
+  assert.ok(
+    await evaluate(
+      'document.querySelector(".history-answer .reference-answer-note").textContent.includes("未保存参考答案")',
+    ),
+  );
   await evaluate(
     'document.querySelectorAll(".history-detail-actions button")[1].click()',
   );
@@ -1175,6 +1297,11 @@ async function main() {
     ),
   );
   const downloadDir = path.join(directory, "review-download-" + randomUUID());
+  assert.ok(
+    await evaluate(
+      'document.querySelector(".history-answer .reference-answer-note").textContent.includes("演示模式")',
+    ),
+  );
   fs.mkdirSync(downloadDir);
   await call("Browser.setDownloadBehavior", {
     behavior: "allow",
@@ -1197,6 +1324,8 @@ async function main() {
     "utf8",
   );
   assert.equal((exported.match(/## 第 [1-4] 题/g) || []).length, 4);
+  assert.ok(exported.includes(initialEvaluation.referenceAnswer.content));
+  assert.ok(exported.includes("参考依据：" + question.contextPath));
   assert.ok(
     exported.includes("无法判断") &&
       exported.includes("规则演示分（不计入能力评分）"),
@@ -2839,6 +2968,67 @@ async function main() {
   console.log(
     "Browser acceptance passed (production frontend; isolated fixed API; no external model calls).",
   );
+  // New training controls and first-use guidance must work in the real UI.
+  noActive = true;
+  switchedProject = false;
+  await reload();
+  await until(
+    '!!document.querySelector("select[name=questionCount]")',
+    "short practice controls",
+  );
+  await evaluate(
+    `(()=>{for(const [name,value] of [['questionCount','2'],['focusDimension','performance']]){const input=document.querySelector('select[name='+name+']');Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(input,value);input.dispatchEvent(new Event('change',{bubbles:true}));}})()`,
+  );
+  await evaluate(
+    '[...document.querySelectorAll("button")].find(b=>b.textContent.includes("开始一次训练")).click()',
+  );
+  await until(
+    '!!document.querySelector("textarea[name=answer]")',
+    "short practice started",
+  );
+  assert.equal(lastStartBody.questionCount, 2);
+  assert.equal(lastStartBody.focusDimension, "performance");
+  assert.ok(
+    await evaluate(
+      'document.querySelector(".workbench-heading").textContent.includes("/ 2 题")',
+    ),
+  );
+  await evaluate(
+    'localStorage.removeItem("repocoach-workspace-v1:workbench-review")',
+  );
+  // The normal document bootstrap seeds a saved project on every reload.
+  // Remove it after that bootstrap so this scenario really starts without one.
+  await call("Page.addScriptToEvaluateOnNewDocument", {
+    source:
+      'localStorage.removeItem("repocoach-workspace-v1:workbench-review");',
+  });
+  await reload();
+  await until(
+    '!!document.querySelector(".first-training-guide")',
+    "first use guidance",
+  );
+  assert.ok(
+    await evaluate(
+      'document.querySelector(".repo-context-bar").textContent.includes("示例项目") && !document.querySelector(".repo-context-bar").textContent.includes("19 个文件")',
+    ),
+  );
+  await shot("first-training-guide-desktop.png");
+  await call("Emulation.setDeviceMetricsOverride", {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    mobile: true,
+  });
+  assert.ok(await evaluate("document.documentElement.scrollWidth<=innerWidth"));
+  await shot("first-training-guide-mobile.png");
+  await evaluate(
+    'document.querySelector(".first-training-actions .primary-button").click()',
+  );
+  await until(
+    '!!document.querySelector(".project-import-dialog")',
+    "guide imports project",
+  );
+  assert.equal(await evaluate('document.querySelector("#repo-url").value'), "");
   console.log("Artifacts: " + directory);
   await call("Browser.close");
 }
